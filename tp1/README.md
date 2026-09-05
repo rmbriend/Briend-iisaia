@@ -1,25 +1,20 @@
-# TP 1 — Título de tu artefacto
+# Telefono Angry bird
 
-Una o dos líneas sobre qué es y qué hace.
+## Autor
 
-## Cómo se ejecuta
+**Roberto Manuel Briend**
 
-Los pasos exactos para que alguien más lo abra. Si es un archivo único, alcanza con decir que se abre `index.html` con doble click.
+## Proyecto
 
-## Qué me propuse construir
+**Telefono Angry bird**
 
-La especificación con la que arrancaste, antes de escribir el primer prompt. Qué tenía que hacer el artefacto y qué decidiste dejar afuera.
+## Qué funcionó
 
-## Decisiones que tomé yo
+Se logró el objetivo de desarrollar una página para cargar teléfonos
+usando una honda lanzadora de Red (Angry Bird) hacia un teclado
+numérico.
 
-Las decisiones de estructura que son tuyas y no del modelo por defecto. Por ejemplo: por qué un solo archivo, por qué ese manejo de estado, por qué esa forma de mostrar los datos.
+## Qué no funcionó
 
-Esta sección es la que más pesa en la corrección. Si acá no hay nada, quiere decir que aceptaste lo primero que salió.
-
-## Qué salió mal y cómo lo corregí
-
-Los desvíos concretos: qué te devolvió que no habías pedido, cómo te diste cuenta, y qué prompt usaste para corregirlo.
-
-## Prompts
-
-El registro completo va en [prompts.md](prompts.md). Acá sólo los dos o tres que más cambiaron el resultado.
+Seguir las etiquetas estrictamente sin caer en la generalización en el
+pedido.

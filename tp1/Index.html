@@ -1,0 +1,773 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Ingrese su número telefónico disparando a Red</title>
+
+  <style>
+    :root {
+      --color-fondo: #000000;
+      --color-texto: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--color-fondo);
+      color: var(--color-texto);
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 16px;
+      text-align: center;
+    }
+
+    main {
+      position: relative;
+      width: 100vw;
+      height: 75vh;
+      min-height: 500px;
+    }
+
+    #gameCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    #gameCanvas.dragging {
+      cursor: grabbing;
+    }
+
+#numeros {
+  position: absolute;
+  left: 20px;
+  top: 10px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  z-index: 2;
+  pointer-events: none;
+}
+
+.numero {
+  width: 40px;
+  height: 40px;
+
+  border: 1px solid var(--color-texto);
+
+  color: var(--color-texto);
+  background: var(--color-fondo);
+
+  font-size: 24px;
+  line-height: 38px;
+  text-align: center;
+
+  user-select: none;
+}
+#resultado {
+  position: fixed;
+
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+
+  width: 320px;
+  min-height: 80px;
+
+  padding: 15px;
+
+  border: 1px solid var(--color-texto);
+  background-color: var(--color-fondo);
+
+  text-align: center;
+
+  z-index: 3;
+}
+
+#telefono {
+  margin-top: 10px;
+
+  font-size: 40px;
+  letter-spacing: 5px;
+
+  word-break: break-all;
+}
+#alerta-trayectoria {
+  display: none;
+
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  color: red;
+  font-size: 32px;
+  font-weight: bold;
+  text-align: center;
+
+  z-index: 10;
+
+  animation: titilar 0.4s infinite;
+}
+
+@keyframes titilar {
+  0%, 100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Ingrese su número telefónico disparando a Red</h1>
+</header>
+
+<main>
+
+<div id="alerta-trayectoria">
+  desactivando visualización de trayectoria...
+</div>
+
+  <div id="numeros">
+    <div class="numero" data-numero="0">0</div>
+    <div class="numero" data-numero="1">1</div>
+    <div class="numero" data-numero="2">2</div>
+    <div class="numero" data-numero="3">3</div>
+    <div class="numero" data-numero="4">4</div>
+    <div class="numero" data-numero="5">5</div>
+    <div class="numero" data-numero="6">6</div>
+    <div class="numero" data-numero="7">7</div>
+    <div class="numero" data-numero="8">8</div>
+    <div class="numero" data-numero="9">9</div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="resultado">
+    <strong>Número telefónico</strong>
+
+    <div id="telefono"></div>
+
+    <div id="mensaje">
+      Arrastre a Red hacia la derecha, apunte y suéltelo.
+    </div>
+  </div>
+
+</main>
+
+<script>
+
+const alertaTrayectoria = document.getElementById("alerta-trayectoria");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const telefonoElement = document.getElementById("telefono");
+const mensajeElement = document.getElementById("mensaje");
+
+let width;
+let height;
+
+function resizeCanvas() {
+
+  const rect = canvas.getBoundingClientRect();
+
+  width = rect.width;
+  height = rect.height;
+
+  canvas.width = width * devicePixelRatio;
+  canvas.height = height * devicePixelRatio;
+
+  ctx.setTransform(
+    devicePixelRatio,
+    0,
+    0,
+    devicePixelRatio,
+    0,
+    0
+  );
+
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+
+// --------------------------------------------------
+// CONFIGURACIÓN
+// --------------------------------------------------
+
+const gravity = 162; // gravedad lunar escalada para la simulación
+
+const slingshot = {
+  x: width - 170,
+  y: 100
+};
+
+const bird = {
+
+  radius: 14,
+
+  x: slingshot.x,
+  y: slingshot.y,
+
+  vx: 0,
+  vy: 0,
+
+  dragging: false,
+  flying: false
+};
+
+let telefono = "";
+
+
+// --------------------------------------------------
+// POSICIONES DE LOS NÚMEROS
+// --------------------------------------------------
+
+function obtenerCajasNumeros() {
+
+  const mainRect =
+    document.querySelector("main").getBoundingClientRect();
+
+  const elementos =
+    document.querySelectorAll(".numero");
+
+  return [...elementos].map(elemento => {
+
+    const r = elemento.getBoundingClientRect();
+
+    return {
+
+      numero: elemento.dataset.numero,
+
+      x: r.left - mainRect.left,
+      y: r.top - mainRect.top,
+
+      width: r.width,
+      height: r.height
+    };
+
+  });
+
+}
+
+
+// --------------------------------------------------
+// MOUSE / POINTER
+// --------------------------------------------------
+
+function posicionPointer(event) {
+
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+
+  };
+
+}
+
+
+canvas.addEventListener("pointerdown", event => {
+
+  if (bird.flying) return;
+
+  const mouse = posicionPointer(event);
+
+  const dx = mouse.x - bird.x;
+  const dy = mouse.y - bird.y;
+
+  const distancia = Math.sqrt(dx * dx + dy * dy);
+
+  if (distancia <= bird.radius * 2) {
+
+    bird.dragging = true;
+
+    canvas.classList.add("dragging");
+
+    canvas.setPointerCapture(event.pointerId);
+
+  }
+
+});
+
+
+canvas.addEventListener("pointermove", event => {
+
+  if (!bird.dragging) return;
+
+  const mouse = posicionPointer(event);
+
+  let dx = mouse.x - slingshot.x;
+  let dy = mouse.y - slingshot.y;
+
+  // El pájaro solo se puede arrastrar hacia la derecha
+  dx = Math.max(dx, 0);
+
+  const maxDistance = 130;
+
+  const distance =
+    Math.sqrt(dx * dx + dy * dy);
+
+  if (distance > maxDistance) {
+
+    dx = dx / distance * maxDistance;
+    dy = dy / distance * maxDistance;
+
+  }
+
+  bird.x = slingshot.x + dx;
+  bird.y = slingshot.y + dy;
+
+});
+
+
+canvas.addEventListener("pointerup", event => {
+
+  if (!bird.dragging) return;
+
+  bird.dragging = false;
+
+  canvas.classList.remove("dragging");
+
+  // Distancia respecto de la honda
+
+const dx = slingshot.x - bird.x;
+const dy = slingshot.y - bird.y;
+
+const power = 6;
+
+bird.vx = dx * power;
+bird.vy = dy * power;
+
+bird.flying = true;
+
+});
+
+
+// --------------------------------------------------
+// COLISIONES
+// --------------------------------------------------
+
+function colisionCirculoRectangulo(circle, rect) {
+
+  const closestX =
+    Math.max(
+      rect.x,
+      Math.min(circle.x, rect.x + rect.width)
+    );
+
+  const closestY =
+    Math.max(
+      rect.y,
+      Math.min(circle.y, rect.y + rect.height)
+    );
+
+  const dx =
+    circle.x - closestX;
+
+  const dy =
+    circle.y - closestY;
+
+  return (
+    dx * dx + dy * dy
+    <
+    circle.radius * circle.radius
+  );
+
+}
+
+
+// --------------------------------------------------
+// REGISTRAR NÚMERO
+// --------------------------------------------------
+
+function registrarNumero(numero) {
+
+  telefono += numero;
+
+  let telefonoFormateado = telefono;
+
+  // Agregar guion después del cuarto dígito
+  if (telefono.length > 4) {
+    telefonoFormateado =
+      telefono.slice(0, 4) + "-" + telefono.slice(4);
+  }
+
+  telefonoElement.textContent = telefonoFormateado;
+  mensajeElement.textContent = "";
+
+  // Después del cuarto número
+  if (telefono.length === 4) {
+
+    alertaTrayectoria.textContent =
+      "desactivando visualización de trayectoria...";
+
+    alertaTrayectoria.style.color = "red";
+    alertaTrayectoria.style.display = "block";
+
+    setTimeout(() => {
+      alertaTrayectoria.style.display = "none";
+    }, 3000);
+  }
+
+  // Al completar los 8 números
+  if (telefono.length === 8) {
+
+    alertaTrayectoria.textContent =
+      "Número telefónico registrado con éxito";
+
+    alertaTrayectoria.style.color = "white";
+    alertaTrayectoria.style.display = "block";
+
+    // Esperar 3 segundos y reiniciar
+    setTimeout(() => {
+
+      alertaTrayectoria.style.display = "none";
+
+      telefono = "";
+      telefonoElement.textContent = "";
+
+      mensajeElement.textContent =
+        "Arrastre el Angry Bird y suéltelo.";
+
+      resetBird();
+
+    }, 3000);
+  }
+
+  resetBird();
+}
+
+
+// --------------------------------------------------
+// RESET
+// --------------------------------------------------
+
+function resetBird() {
+
+  bird.x = slingshot.x;
+  bird.y = slingshot.y;
+
+  bird.vx = 0;
+  bird.vy = 0;
+
+  bird.flying = false;
+
+}
+
+
+// --------------------------------------------------
+// FÍSICA
+// --------------------------------------------------
+
+let previousTime = performance.now();
+
+function actualizar(time) {
+
+  let dt =
+    (time - previousTime) / 1000;
+
+  previousTime = time;
+
+  dt = Math.min(dt, 0.03);
+
+  if (bird.flying) {
+
+    bird.vy += gravity * dt;
+
+    bird.x += bird.vx * dt;
+    bird.y += bird.vy * dt;
+
+
+    const cajas =
+      obtenerCajasNumeros();
+
+
+    for (const caja of cajas) {
+
+      if (
+        colisionCirculoRectangulo(
+          bird,
+          caja
+        )
+      ) {
+
+        registrarNumero(
+          caja.numero
+        );
+
+        break;
+
+      }
+
+    }
+
+
+    // Reiniciar si sale de pantalla
+
+    if (
+      bird.x > width + 100 ||
+      bird.y > height + 100 ||
+      bird.x < -100
+    ) {
+
+      resetBird();
+
+    }
+
+  }
+
+}
+
+
+// --------------------------------------------------
+// DIBUJAR HONDA
+// --------------------------------------------------
+
+function dibujarSlingshot() {
+
+  ctx.lineWidth = 8;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#8b4513";
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    slingshot.x - 10,
+    slingshot.y + 15
+  );
+
+  ctx.lineTo(
+    slingshot.x - 20,
+    slingshot.y + 80
+  );
+
+  ctx.stroke();
+
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    slingshot.x + 10,
+    slingshot.y + 15
+  );
+
+  ctx.lineTo(
+    slingshot.x + 20,
+    slingshot.y + 80
+  );
+
+  ctx.stroke();
+
+
+  if (bird.dragging) {
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#dddddd";
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      slingshot.x - 10,
+      slingshot.y
+    );
+
+    ctx.lineTo(
+      bird.x,
+      bird.y
+    );
+
+    ctx.lineTo(
+      slingshot.x + 10,
+      slingshot.y
+    );
+
+    ctx.stroke();
+  }
+}
+
+
+// --------------------------------------------------
+// DIBUJAR PÁJARO
+// --------------------------------------------------
+
+function dibujarBird() {
+
+  ctx.save();
+
+  // cuerpo
+
+  ctx.fillStyle = "#d62828";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    bird.x,
+    bird.y,
+    bird.radius,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  // ojo
+
+  ctx.fillStyle = "#ffffff";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    bird.x + 5,
+    bird.y - 5,
+    4,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  ctx.fillStyle = "#000000";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    bird.x + 6,
+    bird.y - 5,
+    2,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  // pico
+
+  ctx.fillStyle = "#ffb703";
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    bird.x + 12,
+    bird.y
+  );
+
+  ctx.lineTo(
+    bird.x + 23,
+    bird.y + 4
+  );
+
+  ctx.lineTo(
+    bird.x + 12,
+    bird.y + 8
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+
+}
+
+
+// --------------------------------------------------
+// TRAYECTORIA PREDICHA
+// --------------------------------------------------
+
+function dibujarTrayectoria() {
+
+  // A partir del quinto número, ocultar trayectoria
+  if (telefono.length >= 4) return;
+
+  if (!bird.dragging) return;
+
+  const dx = slingshot.x - bird.x;
+  const dy = slingshot.y - bird.y;
+
+  const vx = dx * 6;
+  const vy = dy * 6;
+
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+
+  for (let t = 0.1; t < 1.5; t += 0.1) {
+
+    const x =
+      slingshot.x +
+      vx * t;
+
+    const y =
+      slingshot.y +
+      vy * t +
+      0.5 * gravity * t * t;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      x,
+      y,
+      2,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+  }
+}
+
+
+// --------------------------------------------------
+// LOOP
+// --------------------------------------------------
+
+function draw(time) {
+
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  actualizar(time);
+
+  dibujarSlingshot();
+
+  dibujarTrayectoria();
+
+  dibujarBird();
+
+  requestAnimationFrame(draw);
+
+}
+
+requestAnimationFrame(draw);
+
+</script>
+
+</body>
+</html>
+```

@@ -1,37 +1,59 @@
-# Prompts — TP 1
+# Prompts ingresados en este chat
 
-El registro del proceso, en orden. No hace falta que sea exhaustivo al carácter, pero sí que se entienda cómo fuiste dirigiendo.
+1.  Escribir una pagina web en un solo archivo html con css y js inline,
+    vanilla js sin dependencias externas .  // definicion de estructura
 
----
+2.  defini dos variables para el color de fondo y del texto, fondo negro
+    texto blanco  // definicion de variables para color de fondo y texto
 
-## 1 — Prompt inicial
+3.  el
 
-```
-Acá va el prompt con el que arrancaste, textual.
-```
+    ```{=html}
+    <header>
+    ```
+    debe decir "Ingrese su numero telefonico"
 
-**Qué devolvió:** en una línea, qué te dio.
+4.  el
 
-**Qué hice con eso:** lo acepté / lo corregí / lo tiré y volví a empezar.
+    ```{=html}
+    <main>
+    ```
+    tiene que permitir que el usuario seleccione numeros del 0 al 9
+    mostrados en cajas de 14px x 14px apiladas a al izquierda de la
+    pantalla, disparando un angry bird desde una slingshot a la
+    izquierda, la slingshot debe permitir apuntar de izquierda a derecha
+    a diferentes alturas y con diferente potencia dependiendo de cuanto
+    el usuario arrastre el angry bird hacia la izq. el disparo debe
+    estar afectado por la gravedad y depeniendo por donde pasa el angry
+    bird se debera registra en una ventana el numero impactado // definicion detallada de la funcionalidad, se aleja de lo tecnico.....
 
----
+5.  incrementar el tamaño del numero a 40 x 40
 
-## 2 — Primera corrección
+6.  el slingshot debe estar a la derecha a una altura mayor que los
+    numeros target de la izquierda y disparar de derecha a izquierda con
+    la gravedad de la luna // reubicacion de la honda por mala definicion inicial
 
-```
-El prompt con el que corregiste.
-```
+7.  los numeros quedaron muy bajo, subir para que entren todos con 40 x
+    40 en la pantalla // ajuste estetico
 
-**Por qué:** qué estaba mal en lo anterior. Esta es la parte que interesa.
+8.  la caja con el numero resultante debe estar en el centro abajo de la
+    pantalla // ajuste estetico
 
----
+9.  eliminar el texto "impactó el numero" en registrarNumero y que luego
+    de cuatro numeros agregue un guion antes del 5 numero. // ajuste estetico
 
-## 3 — ...
+10. a partir del 5 numero impactado que no muestre la linea de
+    trayectoria // ajuste funcional para hacerlo mas dificil de usar
 
-Seguí numerando. Si un prompt no cambió nada relevante, no hace falta que esté.
+11. luego del 4 numero impactado, mostrar un cartel con letras rojas
+    titilantes en el centro de la pantalla indicando "desactivando
+    visualizacion de ayectoria..." durante 3 segundos // ajuste funcional para hacerlo mas dificil de usar
 
----
+12. cuando complete 8 numeros desplegar en el box alerta trajectoria el
+    texto "Numero telefonico registrado con exito" en letras blancas
+    titilante // ajuste funcional para hacerlo cerrar el proceso
 
-## Conversación completa
+13. que desaparezca despues de 3 segundo y se reinicie el ingreso de
+    numeros // ajuste funcional para hacerlo cerrar el proceso
 
-Si la herramienta que usaste permite compartir la conversación con un link público, pegalo acá. Es opcional, pero ayuda a ver el proceso entero.
+
