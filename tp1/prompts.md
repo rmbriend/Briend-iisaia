@@ -1,7 +1,7 @@
-# Prompts ingresados en este chat
+# Prompts ingresados en ChatGPT
 
 1.  Escribir una pagina web en un solo archivo html con css y js inline,
-    vanilla js sin dependencias externas .  // definicion de estructura
+    vanilla js sin dependencias externas .  ###//definicion de estructura
 
 2.  defini dos variables para el color de fondo y del texto, fondo negro
     texto blanco  // definicion de variables para color de fondo y texto
