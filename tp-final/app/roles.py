@@ -1,9 +1,8 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
-
-from .common import admin_required, delete, record, required, save
+from flask import Blueprint, jsonify
+from .common import admin_required, delete, record, text, save, rows_json
 from .db import get_db
 
-bp = Blueprint('roles', __name__, url_prefix='/roles')
+bp = Blueprint('roles', __name__, url_prefix='/api/roles')
 
 
 @bp.before_request
@@ -13,28 +12,28 @@ def protect():
 
 @bp.get('')
 def index():
-    return render_template('roles.html', roles=get_db().execute('SELECT * FROM rol ORDER BY rol_descripcion').fetchall())
+    return jsonify(rows_json(get_db().execute('SELECT * FROM rol ORDER BY rol_descripcion')))
 
 
-@bp.route('/nuevo', methods=['GET', 'POST'])
-@bp.route('/<int:identifier>/editar', methods=['GET', 'POST'])
+@bp.get('/<int:identifier>')
+def detail(identifier):
+    return jsonify(dict(record('rol', 'rol_id', identifier)))
+
+
+@bp.post('')
+@bp.put('/<int:identifier>')
 def edit(identifier=None):
     item = record('rol', 'rol_id', identifier) if identifier else None
-    if request.method == 'POST':
-        try:
-            name = required('rol_descripcion')
-            ok = save('UPDATE rol SET rol_descripcion=? WHERE rol_id=?', (name, identifier)) if item else save(
-                'INSERT INTO rol (rol_descripcion) VALUES (?)', (name,))
-            if ok:
-                flash('Rol guardado.', 'success')
-                return redirect(url_for('roles.index'))
-        except ValueError as error:
-            flash(str(error), 'danger')
-    return render_template('role_form.html', item=item)
+    name = text('rol_descripcion')
+    if item:
+        save('UPDATE rol SET rol_descripcion=? WHERE rol_id=?', (name, identifier))
+    else:
+        identifier = save('INSERT INTO rol (rol_descripcion) VALUES (?)', (name,))
+    return jsonify(dict(record('rol', 'rol_id', identifier))), 200 if item else 201
 
 
-@bp.post('/<int:identifier>/eliminar')
+@bp.delete('/<int:identifier>')
 def remove(identifier):
     record('rol', 'rol_id', identifier)
     delete('rol', 'rol_id', identifier)
-    return redirect(url_for('roles.index'))
+    return '', 204

@@ -1,6 +1,6 @@
 # Especificación funcional
 
-Aplicación local de seguimiento de proyectos, en español, con frontend HTML/JavaScript/CSS y backend API Flask con SQLite; Bootstrap aporta estilos base.
+Aplicación local de seguimiento de proyectos, en español, con Flask, HTML, Bootstrap y SQLite.
 
 ## Entidades
 
@@ -19,12 +19,8 @@ El avance real es manual de 0 a 100, independiente del estado y del consumo. Hor
 
 Todos los usuarios autenticados consultan proyectos y consumos; los usuarios comunes crean, editan y eliminan consumos propios. El responsable edita su proyecto salvo la asignación del responsable. El administrador administra todo, incluidos recursos y roles, creación/eliminación de proyectos y reasignaciones. Debe quedar al menos un administrador. Se verifican permisos en el servidor.
 
-La inicialización de una base vacía crea admin / Proyecto1 y exige cambiar esa contraseña. Nuevos usuarios y contraseñas restablecidas también requieren cambio. La inicialización no sobrescribe cuentas. Contraseñas con hash scrypt de Werkzeug, mínimo 8 caracteres para nuevas contraseñas. Todas las mutaciones requieren JSON y CSRF: POST para altas, PUT para actualizaciones y DELETE para bajas. Sin recuperación por correo ni despliegue público.
+La inicialización de una base vacía crea admin / Proyecto1 y exige cambiar esa contraseña. Nuevos usuarios y contraseñas restablecidas también requieren cambio. La inicialización no sobrescribe cuentas. Contraseñas con hash scrypt de Werkzeug, mínimo 8 caracteres para nuevas contraseñas. Todas las mutaciones requieren POST y CSRF. Sin recuperación por correo ni despliegue público.
 
 ## Interfaz y aceptación
 
 Tablero con filtros de estado/responsable, tarjetas, horas y avance real; detalle con consumos y totales por recurso/rol. Formularios con errores comprensibles y preservación de entradas no sensibles. Diseño adaptable a móvil. Aceptación: CRUD, login/logout, permisos directos, CSRF, integridad, porcentajes límite, recálculo, persistencia e inicialización repetible.
-
-## Separación tecnológica
-
-El frontend estático consume exclusivamente la API JSON mediante fetch. La API verifica autenticación, permisos y validaciones. Se preserva el esquema y la base existente. Consultar docs/API.md para el contrato HTTP. No se utilizan plantillas Jinja.

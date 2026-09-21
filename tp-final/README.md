@@ -1,26 +1,46 @@
-# Pulso — Seguimiento de proyectos
+# Pulso — Frontend web y API de proyectos
 
-Aplicación web en español para registrar dedicación y avance de proyectos. Backend Flask, SQLite persistente, interfaz HTML con Bootstrap y diseño adaptable. El avance real se registra manualmente; las horas consumidas se calculan desde los registros.
+Aplicación en español para registrar dedicación y avance de proyectos, dividida en dos componentes:
 
-## Cómo se ejecuta
+- **Frontend:** HTML, JavaScript nativo (módulos ES) y CSS en `frontend/`. Consume JSON con `fetch`; no utiliza plantillas Jinja ni necesita compilarse. Bootstrap aporta estilos base.
+- **Backend:** API Flask en `app/`, sin páginas HTML. SQLite persiste los datos en `instance/proyectos.sqlite`.
 
-Requiere Python 3.11 o posterior. Desde `tp-final`, en PowerShell:
+## Ejecutar
+
+Requiere Python 3.11 o posterior. Desde `tp-final`, preparar una vez:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+**Terminal 1 — API, puerto 5000:**
+
+```powershell
 $env:SECRET_KEY = & .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
 .\.venv\Scripts\python.exe -m flask --app app init-db
 .\.venv\Scripts\python.exe -m flask --app app run --host 127.0.0.1 --port 5000
 ```
 
-Abrir http://127.0.0.1:5000. Acceso inicial: **admin / Proyecto1**. El primer ingreso exige cambiar la contraseña. Luego crear recursos, roles y proyectos para comenzar a registrar consumos. No se cargan proyectos ficticios en la base real.
+**Terminal 2 — frontend, puerto 8000:**
 
-La base se guarda en `instance/proyectos.sqlite`. Reiniciar el servidor conserva los datos. Repetir `init-db` crea objetos faltantes sin borrar datos ni restablecer contraseñas; no es un sistema de migraciones para futuras versiones del esquema. Para respaldar, detener el servidor y copiar el archivo SQLite.
+```powershell
+.\.venv\Scripts\python.exe frontend/server.py
+```
 
-`SECRET_KEY` es obligatoria y no se guarda en Git. Conservar el mismo valor en el entorno si se desea mantener sesiones entre reinicios; cambiarlo invalida sesiones. En una instalación futura bajo HTTPS, configurar `COOKIE_SECURE=1`. El servidor de desarrollo se utiliza únicamente en localhost. Bootstrap se obtiene por CDN; requiere conexión para sus estilos completos.
+Abrir **http://127.0.0.1:8000**. El puerto 5000 expone únicamente la API. En una instalación nueva el acceso es **admin / Proyecto1**, con cambio obligatorio de contraseña. Si ya tenías usuarios, contraseñas o proyectos, seguí utilizando los existentes: esta separación no cambia el esquema ni borra datos.
 
-## Uso y permisos
+El servidor del frontend sirve archivos estáticos y reenvía `/api/*` al backend. Así el navegador usa un solo origen para la interfaz, cookies y CSRF. No hay acceso a SQLite ni reglas de negocio en ese servidor. En un futuro despliegue se puede sustituir por un servidor estático con proxy inverso; no hace falta reescribir el frontend. Ejecutar los servidores de desarrollo solo en localhost.
+
+Puertos alternativos: `python frontend/server.py --port 8000 --api-port 5000`. Para el backend, usar `flask run --port PUERTO`. No abrir `index.html` mediante `file://`: necesita HTTP y el proxy de API.
+
+## Configuración y persistencia
+
+`SECRET_KEY` es obligatoria y no se guarda en Git. Conservar su valor entre reinicios mantiene las sesiones; generar uno nuevo obliga a iniciar sesión otra vez. Si se usa HTTPS en otro entorno, configurar `COOKIE_SECURE=1`. Bootstrap se carga desde CDN y requiere conexión para sus estilos completos.
+
+La base sigue en `instance/proyectos.sqlite`. `init-db` es idempotente: no borra datos ni restablece contraseñas. No se requiere migración para esta versión. Para respaldar, detener el backend y copiar el archivo SQLite. No ejecutar simultáneamente la versión anterior y esta sobre la misma base durante la transición.
+
+## Permisos y reglas
 
 | Acción | Usuario | Responsable del proyecto | Administrador |
 |---|---|---|---|
@@ -31,45 +51,43 @@ La base se guarda en `instance/proyectos.sqlite`. Reiniciar el servidor conserva
 | Crear/eliminar proyecto o reasignar responsable | No | No | Sí |
 | Gestionar usuarios, contraseñas y roles | No | No | Sí |
 
-Cada recurso es una cuenta; su nombre único es el usuario de acceso. Rol representa la función desempeñada en cada consumo. No se puede eliminar un registro con referencias ni dejar al sistema sin administradores. El avance manual (0–100) no cambia al cargar horas o cambiar el estado. Las horas pueden superar la estimación y las fechas previstas; el tablero muestra el exceso.
+Cada recurso es una cuenta; su nombre único es el usuario. Rol es la función en cada consumo. El avance manual de 0 a 100 es independiente del estado y las horas. Se admiten consumos por encima de la estimación o fuera de las fechas previstas. No se eliminan registros con referencias ni al último administrador.
 
-## Arquitectura y contrato
+## Arquitectura
 
-Fábrica `app.create_app`, blueprints para autenticación, proyectos, recursos, roles y consumos. `app/db.py` abre una conexión SQLite por solicitud y habilita claves foráneas. `app/schema.sql` define las tablas. Jinja genera HTML con escape automático; los formularios usan `application/x-www-form-urlencoded` y token CSRF. No hay API JSON ni frontend separado.
+```text
+Navegador: frontend/index.html + app.js + api.js + ui.js + styles.css
+    │ fetch('/api/...'), JSON, cookie HttpOnly, X-CSRF-Token
+    ▼
+Servidor estático / proxy local :8000 (frontend/server.py)
+    │ /api/*
+    ▼
+API Flask :5000 (app/)
+    │ consultas parametrizadas, permisos, validación
+    ▼
+SQLite (instance/proyectos.sqlite)
+```
 
-| Rutas | Métodos y comportamiento |
-|---|---|
-| `/login` | GET formulario, POST autentica |
-| `/logout` | POST cierra sesión |
-| `/password` | GET formulario, POST cambia contraseña propia |
-| `/proyectos`, `/consumos`, `/recursos`, `/roles` | GET listados |
-| `/proyectos/<id>` | GET detalle y agregados |
-| `/<entidad>/nuevo`, `/<entidad>/<id>/editar` | GET formulario, POST valida y guarda |
-| `/<entidad>/<id>/eliminar` | POST elimina si permisos e integridad lo permiten |
+El frontend controla navegación, formularios, mensajes y renderizado con valores escapados. Flask verifica todos los permisos aunque se invoque directamente la API; nunca devuelve hashes de contraseñas. No se almacenan credenciales ni tokens de sesión en localStorage.
 
-`/proyectos` acepta filtros GET `estado` y `responsable`. Los formularios conservan los nombres de columna definidos en la especificación. POST válido redirige; errores de validación vuelven a mostrar el formulario con mensaje. Se utiliza 403 para permisos insuficientes, 404 para registros inexistentes y 400 para CSRF inválido. Accesos sin sesión redirigen al login.
+Los módulos de Flask separan autenticación, proyectos, consumos, recursos y roles. `db.py` abre una conexión por solicitud con claves foráneas activas. Los totales se calculan en el backend. El contrato está en [docs/API.md](docs/API.md).
 
 ## Pruebas
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m pytest -q
+node --test tests/frontend.test.mjs
 ```
 
-Cada prueba utiliza SQLite temporal y no altera la base local. Se cubren autenticación, cambio obligatorio, CSRF, permisos por solicitudes directas, CRUD, referencias, último administrador, entradas inválidas, avance 0/100, exceso de horas, totales, escape HTML, persistencia e inicialización idempotente.
+Node 20+ solo se necesita para ejecutar las pruebas de JavaScript, no para usar la aplicación. Python prueba contrato JSON, login/logout, CSRF, permisos, CRUD, integridad, validaciones, agregados, inicialización, persistencia y el proxy HTTP real. JavaScript prueba escape de entradas, cookies, CSRF y manejo de errores. Las pruebas utilizan bases temporales.
 
-## Qué decidí yo
+## Decisiones y contexto
 
-- Flask con plantillas permite ejecutar y defender una sola aplicación, sin compilación de frontend.
-- SQLite es suficiente para la primera versión local; claves foráneas y consultas parametrizadas aseguran integridad.
-- Se agregan `consumo_id`, `es_admin` y `debe_cambiar_password` para identificar consumos y administrar acceso. Contraseñas almacenadas con scrypt de Werkzeug.
-- Las modificaciones del último administrador se protegen dentro de una transacción SQLite de escritura.
-- El porcentaje real es manual; usar horas gastadas como avance podría dar una lectura engañosa del trabajo terminado.
+La especificación funcional permanece en [docs/ESPECIFICACION.md](docs/ESPECIFICACION.md), la separación está documentada en [docs/PLAN.md](docs/PLAN.md) y los resultados en [docs/VALIDACION.md](docs/VALIDACION.md). La versión inicial usaba Flask/Jinja; esta versión retira las plantillas y reemplaza formularios POST/redirect por API REST JSON y navegación JavaScript.
 
-## Cómo gestioné el contexto
+Se mantiene Flask y SQLite para aprovechar los datos y reglas existentes. El proxy permite separar procesos sin guardar tokens en el navegador ni habilitar CORS amplio. Las contraseñas siguen usando scrypt de Werkzeug y los catálogos públicos para usuarios autenticados incluyen solo IDs y nombres necesarios para seleccionar recursos y roles.
 
-La especificación está en [docs/ESPECIFICACION.md](docs/ESPECIFICACION.md), el plan en [docs/PLAN.md](docs/PLAN.md) y las pruebas automatizadas expresan las reglas acordadas. Los módulos separan cada área funcional. El README conserva el contrato y las decisiones para continuar en futuras sesiones.
+## Evidencia Git
 
-## Qué salió mal
-
-La raíz del repositorio Git está por encima de `tp-final`. La solicitud para crear la rama fue rechazada porque requiere escribir en los metadatos del repositorio padre; quedó pendiente la evidencia de rama, commits y PR. Los archivos de aplicación y documentación se conservan dentro del trabajo práctico.
+No se crearon ramas, commits ni PR desde esta sesión: la escritura de metadatos del repositorio padre no fue autorizada anteriormente. La copia externa `tp-final - Flask` no se modifica.

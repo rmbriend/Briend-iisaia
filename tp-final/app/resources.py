@@ -1,11 +1,9 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, g, jsonify
 from werkzeug.security import generate_password_hash
-
-from .common import admin_required, delete, record, required
+from .common import APIError, admin_required, delete, record, text, public_user
 from .db import get_db
-import sqlite3
 
-bp = Blueprint('resources', __name__, url_prefix='/recursos')
+bp = Blueprint('resources', __name__, url_prefix='/api/recursos')
 
 
 @bp.before_request
@@ -19,50 +17,51 @@ def last_admin(db, item):
 
 @bp.get('')
 def index():
-    return render_template('resources.html', resources=get_db().execute('SELECT * FROM recurso ORDER BY recurso_nombre').fetchall())
+    return jsonify([public_user(row) for row in get_db().execute('SELECT * FROM recurso ORDER BY recurso_nombre')])
 
 
-@bp.route('/nuevo', methods=['GET', 'POST'])
-@bp.route('/<int:identifier>/editar', methods=['GET', 'POST'])
+@bp.get('/<int:identifier>')
+def detail(identifier):
+    return jsonify(public_user(record('recurso', 'recurso_id', identifier)))
+
+
+@bp.post('')
+@bp.put('/<int:identifier>')
 def edit(identifier=None):
     item = record('recurso', 'recurso_id', identifier) if identifier else None
-    if request.method == 'POST':
-        db = get_db()
-        try:
-            name = required('recurso_nombre')
-            admin = int(request.form.get('es_admin') == '1')
-            password = request.form.get('password', '')
-            if (not item or password) and len(password) < 8:
-                raise ValueError('La contraseña debe tener al menos 8 caracteres.')
-            db.execute('BEGIN IMMEDIATE')
-            if item:
-                current = record('recurso', 'recurso_id', identifier)
-                if not admin and last_admin(db, current):
-                    raise ValueError('Debe quedar al menos un administrador.')
-                db.execute('UPDATE recurso SET recurso_nombre=?,es_admin=? WHERE recurso_id=?', (name, admin, identifier))
-                if password:
-                    db.execute('UPDATE recurso SET password=?,debe_cambiar_password=1 WHERE recurso_id=?',
-                               (generate_password_hash(password), identifier))
-            else:
-                db.execute('INSERT INTO recurso (recurso_nombre,password,es_admin) VALUES (?,?,?)',
-                           (name, generate_password_hash(password), admin))
-            db.commit()
-            flash('Recurso guardado.', 'success')
-            return redirect(url_for('resources.index'))
-        except (ValueError, sqlite3.IntegrityError) as error:
+    name = text('recurso_nombre')
+    raw_admin = g.data.get('es_admin', False)
+    if not isinstance(raw_admin, (bool, int)) or raw_admin not in (0, 1):
+        raise ValueError('es_admin debe ser un booleano.')
+    admin = int(raw_admin)
+    password = text('password', optional=bool(item), strip=False)
+    if (not item or password) and len(password) < 8:
+        raise ValueError('La contraseña debe tener al menos 8 caracteres.')
+    db = get_db()
+    db.execute('BEGIN IMMEDIATE')
+    if item:
+        current = record('recurso', 'recurso_id', identifier)
+        if not admin and last_admin(db, current):
             db.rollback()
-            flash(str(error) if isinstance(error, ValueError) else 'Ya existe un usuario con ese nombre.', 'danger')
-    return render_template('resource_form.html', item=item)
+            raise APIError('Debe quedar al menos un administrador.', 409, 'last_admin')
+        db.execute('UPDATE recurso SET recurso_nombre=?,es_admin=? WHERE recurso_id=?', (name, admin, identifier))
+        if password:
+            db.execute('UPDATE recurso SET password=?,debe_cambiar_password=1 WHERE recurso_id=?',
+                       (generate_password_hash(password), identifier))
+    else:
+        identifier = db.execute('INSERT INTO recurso (recurso_nombre,password,es_admin) VALUES (?,?,?)',
+                                (name, generate_password_hash(password), admin)).lastrowid
+    db.commit()
+    return jsonify(public_user(record('recurso', 'recurso_id', identifier))), 200 if item else 201
 
 
-@bp.post('/<int:identifier>/eliminar')
+@bp.delete('/<int:identifier>')
 def remove(identifier):
     db = get_db()
     db.execute('BEGIN IMMEDIATE')
     item = record('recurso', 'recurso_id', identifier)
     if last_admin(db, item):
         db.rollback()
-        flash('No se puede eliminar al último administrador.', 'danger')
-    else:
-        delete('recurso', 'recurso_id', identifier)
-    return redirect(url_for('resources.index'))
+        raise APIError('No se puede eliminar al último administrador.', 409, 'last_admin')
+    delete('recurso', 'recurso_id', identifier)
+    return '', 204

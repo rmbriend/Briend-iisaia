@@ -28,17 +28,15 @@ def client(app):
     return app.test_client()
 
 
-def mutate(client, method, path, data=None):
-    token = client.get('/api/session').json['csrf_token']
-    return client.open(path, method=method, json=data or {}, headers={'X-CSRF-Token': token})
-
-
-def post(client, path, data=None):
-    return mutate(client, 'POST', path, data)
+def post(client, path, data=None, **kwargs):
+    client.get('/login')
+    with client.session_transaction() as session:
+        token = session['csrf']
+    return client.post(path, data={**(data or {}), 'csrf_token': token}, **kwargs)
 
 
 def login(client, name='admin', password='Proyecto1'):
-    return post(client, '/api/login', {'recurso_nombre': name, 'password': password})
+    return post(client, '/login', {'recurso_nombre': name, 'password': password})
 
 
 def project_data():

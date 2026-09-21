@@ -1,17 +1,19 @@
-# Plan de implementación
+# Plan de separación frontend / backend
 
-1. Crear fábrica Flask, conexión SQLite por solicitud, esquema con restricciones y comando init-db idempotente.
-2. Implementar autenticación, hashes, CSRF, cambio obligatorio y permisos con lectura del usuario actual desde la base.
-3. Implementar recursos y roles; proteger referencias y al último administrador con transacción de escritura.
-4. Implementar proyectos, consumos, filtros y agregados, separando avance manual del consumo de horas.
-5. Construir interfaz en español con Bootstrap y estilos adaptables a escritorio/móvil.
-6. Probar reglas, errores, permisos, CRUD, persistencia y recorrido visual; documentar ejecución y decisiones.
-7. Conservar cambios en rama codex/seguimiento-proyectos, commits y PR si los permisos del repositorio lo permiten.
+## Objetivo
 
-## Decisiones acordadas
+Reemplazar la interfaz renderizada en Flask por un frontend independiente en HTML, JavaScript y CSS, conservando SQLite, usuarios, proyectos y reglas funcionales.
 
-Flask con plantillas, SQLite local, usuarios en recurso, rol laboral por consumo, administrador inicial, porcentaje manual y permisos según responsabilidad. Sin API JSON, entidad tarea separada ni publicación en Internet. El navegador envía formularios al mismo servidor.
+## Implementación
 
-## Restricción del entorno
+1. Convertir blueprints Flask a API `/api`, con JSON, códigos HTTP y serialización explícita que excluye hashes.
+2. Mantener cookies HttpOnly y CSRF; bootstrap de sesión y token por GET, renovación en login/logout/cambio de contraseña.
+3. Crear frontend con módulos ES: cliente HTTP, componentes seguros y navegación/formularios. Mantener pantallas, permisos visibles y diseño adaptable.
+4. Retirar plantillas Jinja y mover estilos al frontend. Servirlo como componente separado con proxy `/api` al backend, sin lógica de negocio.
+5. Migrar pruebas funcionales al contrato JSON y agregar pruebas del cliente y del proxy.
+6. Validar ambos componentes en navegador con base temporal; iniciar la aplicación real conservando la base existente.
+7. Actualizar documentación de ejecución y contrato. No realizar operaciones Git que requieran la autorización rechazada anteriormente.
 
-La raíz Git es el directorio padre del trabajo práctico. La solicitud para crear la rama fue rechazada; no se modifican metadatos Git sin autorización. La implementación y sus verificaciones permanecen en tp-final.
+## Compatibilidad
+
+No hay cambio de esquema ni reinicialización destructiva. La URL de la interfaz pasa al puerto 8000; el 5000 contiene solamente API. Cambiar SECRET_KEY al reiniciar invalida sesiones, pero mantiene cuentas, contraseñas y datos. Los endpoints HTML anteriores se reemplazan por el contrato documentado en API.md.

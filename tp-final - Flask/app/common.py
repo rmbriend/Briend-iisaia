@@ -1,15 +1,10 @@
 import math
+import sqlite3
 from datetime import date
 
-from flask import abort, g
+from flask import abort, flash, g, request
+
 from .db import get_db
-
-
-class APIError(Exception):
-    def __init__(self, message, status=400, code='validation_error'):
-        super().__init__(message)
-        self.status = status
-        self.code = code
 
 
 def admin_required():
@@ -18,29 +13,23 @@ def admin_required():
 
 
 def record(table, key, identifier):
-    # Table and key are internal constants, not client input.
+    # Identifiers are internal constants, never request values.
     row = get_db().execute(f'SELECT * FROM {table} WHERE {key}=?', (identifier,)).fetchone()
     if row is None:
         abort(404, 'No se encontró el registro.')
     return row
 
 
-def text(name, optional=False, strip=True):
-    value = g.data.get(name, '')
-    if not isinstance(value, str):
-        raise ValueError(f'{name}: se esperaba texto.')
-    value = value.strip() if strip else value
-    if not optional and not value:
+def required(name):
+    value = request.form.get(name, '').strip()
+    if not value:
         raise ValueError('Completá todos los campos obligatorios.')
     return value
 
 
 def number(name, minimum=0, maximum=None, strict=True):
-    value = g.data.get(name)
-    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
-        raise ValueError('Ingresá valores numéricos válidos.')
     try:
-        value = float(value)
+        value = float(required(name))
     except ValueError:
         raise ValueError('Ingresá valores numéricos válidos.') from None
     if not math.isfinite(value) or (value <= minimum if strict else value < minimum) or (maximum is not None and value > maximum):
@@ -50,8 +39,8 @@ def number(name, minimum=0, maximum=None, strict=True):
 
 def dates():
     try:
-        start = date.fromisoformat(text('fecha_inicio'))
-        end = date.fromisoformat(text('fecha_fin'))
+        start = date.fromisoformat(required('fecha_inicio'))
+        end = date.fromisoformat(required('fecha_fin'))
     except ValueError:
         raise ValueError('Ingresá fechas válidas.') from None
     if end < start:
@@ -60,11 +49,8 @@ def dates():
 
 
 def reference(name, table, key):
-    raw = g.data.get(name)
-    if isinstance(raw, bool) or not isinstance(raw, (int, str)):
-        raise ValueError('Seleccioná una referencia válida.')
     try:
-        value = int(raw)
+        value = int(required(name))
     except ValueError:
         raise ValueError('Seleccioná una referencia válida.') from None
     if get_db().execute(f'SELECT 1 FROM {table} WHERE {key}=?', (value,)).fetchone() is None:
@@ -74,18 +60,22 @@ def reference(name, table, key):
 
 def save(sql, values):
     db = get_db()
-    cursor = db.execute(sql, values)
-    db.commit()
-    return cursor.lastrowid
+    try:
+        db.execute(sql, values)
+        db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        db.rollback()
+        flash('No se pudo guardar: el nombre ya existe o hay referencias inválidas.', 'danger')
+        return False
 
 
 def delete(table, key, identifier):
-    save(f'DELETE FROM {table} WHERE {key}=?', (identifier,))
-
-
-def public_user(row):
-    return {key: row[key] for key in ('recurso_id', 'recurso_nombre', 'es_admin', 'debe_cambiar_password')}
-
-
-def rows_json(rows):
-    return [dict(row) for row in rows]
+    db = get_db()
+    try:
+        db.execute(f'DELETE FROM {table} WHERE {key}=?', (identifier,))
+        db.commit()
+        flash('Registro eliminado.', 'success')
+    except sqlite3.IntegrityError:
+        db.rollback()
+        flash('No se puede eliminar: tiene proyectos o consumos asociados.', 'danger')

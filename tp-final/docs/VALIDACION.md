@@ -1,25 +1,27 @@
-# Validación de la primera entrega
+# Validación de la separación frontend / API
 
 ## Automatizada
 
-Resultado final: `python -m pytest -q` — **49 pruebas aprobadas**. Compilación Python y `git diff --check` sin errores.
-
-Suite pytest con bases SQLite temporales: autenticación, cambio inicial obligatorio, CSRF, permisos directos GET/POST, CRUD, validación, referencias, protección del último administrador, filtros, agregados, escape HTML, persistencia e inicialización repetida.
-
-Durante la primera ejecución se detectó que el comando init-db requería un contexto Flask. Se corrigió agregando with_appcontext y se verificó el comando con FlaskCliRunner.
+- `python -m pytest -q tests/test_app.py`: 66 pruebas aprobadas de API JSON, permisos, CRUD, validaciones, CSRF, hashes no expuestos, integridad, agregados y persistencia.
+- `python -m pytest -q tests/test_frontend_server.py`: 2 pruebas aprobadas del servidor estático/proxy con llamadas HTTP reales, cookies, login, escrituras y API desconectada.
+- `node --test tests/frontend.test.mjs`: 2 pruebas aprobadas del cliente JavaScript: escape de entradas, JSON, cookies, renovación CSRF, DELETE 204 y errores de red/servidor sin reintentar escrituras.
+- Compilación Python y comprobación de sintaxis de los tres módulos JavaScript.
 
 ## Navegador
 
-Revisión realizada contra un servidor local con una base temporal separada de la base del usuario:
+Revisión contra frontend y API separados en puertos de prueba, con SQLite temporal:
 
-- Ingreso con la cuenta de prueba y visualización del tablero en escritorio.
-- Creación de un proyecto con 40 horas requeridas y 35 % de avance manual.
-- Registro de 12,5 horas desde el detalle del proyecto; comprobación de la preselección del proyecto.
-- Confirmación del saldo de 27,5 horas y totales por recurso y rol, conservando el avance manual en 35 %.
-- Revisión a 390 × 844 píxeles: navegación, tarjetas y resúmenes adaptables; tabla con desplazamiento horizontal. Se ajustó su ancho mínimo para evitar palabras excesivamente partidas.
+- Login desde HTML/JavaScript y carga del tablero mediante API.
+- Creación de proyecto con 20 horas y 40 % de avance manual.
+- Intento de consumo con cero horas: error visible sin perder datos del formulario.
+- Consumo de 25,5 horas fuera del período previsto: exceso de 5,5 horas y avance manual conservado en 40 %.
+- Recarga de URL de detalle: rutas del frontend y sesión siguen funcionando.
+- Alta y edición de rol mediante POST y PUT JSON.
+- Filtro por estado sin resultados y limpieza del filtro.
+- Revisión a 390 × 844 píxeles: navegación, indicadores y filtros sin desbordamiento horizontal de página.
 
-La revisión visual usa datos descartables; no se agregaron esos proyectos ni consumos a instance/proyectos.sqlite. La contraseña inicial de la instalación real queda pendiente de cambio por el usuario.
+Los datos de prueba no se cargan en la base del usuario. No se cambia el esquema de SQLite ni se restablecen contraseñas existentes. La interfaz pasa al puerto 8000 y la API al 5000.
 
-## Limitación de entrega
+## Historial
 
-Rama, commits y PR pendientes: la escritura de metadatos Git en el directorio padre no fue autorizada.
+La versión inicial Flask/Jinja tuvo 49 pruebas aprobadas; esa suite fue adaptada al contrato JSON, por lo que los conteos no se suman. En esta versión se retiran las plantillas y la navegación por formularios HTML del backend.
