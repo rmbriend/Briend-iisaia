@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block title %}Error {{ error.code }}{% endblock %}{% block content %}<section class="panel empty"><p class="eyebrow">ERROR {{ error.code }}</p><h1>No se pudo completar la solicitud</h1><p>{{ error.description }}</p><a class="btn btn-primary" href="{{ url_for('projects.index') }}">Volver al inicio</a></section>{% endblock %}

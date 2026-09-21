@@ -1,0 +1,14 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ session.csrf }}">{% endmacro %}
+{% macro field(name, label, item=none, type='text', default='', min=none, max=none, step=none) %}
+<div class="field"><label for="{{ name }}">{{ label }}</label><input class="form-control" id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ request.form.get(name, item[name] if item else default) }}" required {% if min is not none %}min="{{ min }}"{% endif %} {% if max is not none %}max="{{ max }}"{% endif %} {% if step %}step="{{ step }}"{% endif %}></div>
+{% endmacro %}
+{% macro select(name, label, rows, key, text, item=none, default='') %}
+<div class="field"><label for="{{ name }}">{{ label }}</label><select class="form-select" id="{{ name }}" name="{{ name }}" required><option value="">Seleccionar…</option>{% for row in rows %}<option value="{{ row[key] }}" {% if request.form.get(name, item[name] if item else default)|string == row[key]|string %}selected{% endif %}>{{ row[text] }}</option>{% endfor %}</select></div>
+{% endmacro %}
+{% macro remove(action, label='Eliminar') %}<form class="inline" method="post" action="{{ action }}" data-confirm="¿Eliminar este registro? Esta acción no se puede deshacer.">{{ csrf() }}<button class="btn btn-sm btn-outline-danger">{{ label }}</button></form>{% endmacro %}
+{% macro progress(value) %}<div class="progress-label"><span>Avance real</span><strong>{{ '%g'|format(value) }} %</strong></div><div class="progress" role="progressbar" aria-label="Avance real" aria-valuenow="{{ value }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width: {{ value }}%"></div></div>{% endmacro %}
+{% macro consumption_table(rows, show_project=false) %}
+<div class="table-responsive"><table class="table"><thead><tr>{% if show_project %}<th>Proyecto</th>{% endif %}<th>Tarea / recurso</th><th>Rol</th><th>Período</th><th class="text-end">Horas</th><th>Acciones</th></tr></thead><tbody>
+{% for row in rows %}<tr>{% if show_project %}<td><a href="{{ url_for('projects.detail', identifier=row.proyecto_id) }}">{{ row.proyecto_nombre }}</a></td>{% endif %}<td><strong>{{ row.tarea }}</strong><small class="d-block muted">{{ row.recurso_nombre }}</small></td><td>{{ row.rol_descripcion }}</td><td class="date-cell">{{ row.fecha_inicio }}<br>{{ row.fecha_fin }}</td><td class="text-end">{{ '%g'|format(row.horas_consumidas) }}</td><td>{% if g.user.es_admin or g.user.recurso_id == row.recurso_id %}<div class="actions"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('consumptions.edit', identifier=row.consumo_id) }}">Editar</a>{{ remove(url_for('consumptions.remove', identifier=row.consumo_id)) }}</div>{% else %}<span class="muted">Solo lectura</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="{{ 6 if show_project else 5 }}" class="empty">Todavía no hay consumos registrados.</td></tr>{% endfor %}</tbody></table></div>
+{% endmacro %}
