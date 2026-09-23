@@ -7,4 +7,4 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY . .
 RUN uv sync --frozen --no-dev
 EXPOSE 5000
-CMD ["sh", "-c", "alembic upgrade head && uvicorn pulso.asgi:app --host 0.0.0.0 --port 5000 --proxy-headers"]
+CMD ["sh", "-c", "python -m pulso.cli init-db && uvicorn pulso.asgi:app --host 0.0.0.0 --port 5000 --proxy-headers"]

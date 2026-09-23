@@ -14,8 +14,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
+from pulso.cli import seed
 from pulso.config import Settings
 from pulso.main import create_app
+from pulso.security import hash_password
 
 SERVER_URL = os.environ.get('TEST_DATABASE_URL', 'postgresql+psycopg://pulso:pulso@localhost:5432/pulso')
 ALEMBIC_INI = os.path.join(os.path.dirname(__file__), '..', 'alembic.ini')
@@ -60,6 +62,80 @@ def app(migrated):
 
 
 @pytest.fixture
-def client(app):
-    with TestClient(app) as client:
+def seeded(app):
+    """Same fixture data as the Flask suite: admin(1), ana(2), bruno(3), one project owned by ana."""
+    seed(app.state.engine)
+    personal = hash_password('Personal123')
+    with app.state.engine.begin() as connection:
+        connection.execute(text('UPDATE recurso SET debe_cambiar_password=false WHERE recurso_id=1'))
+        for name in ('ana', 'bruno'):
+            connection.execute(
+                text(
+                    'INSERT INTO recurso (recurso_nombre,password,debe_cambiar_password) VALUES (:n,:p,false)'
+                ),
+                {'n': name, 'p': personal},
+            )
+        connection.execute(text("INSERT INTO rol (rol_descripcion) VALUES ('Analista')"))
+        connection.execute(
+            text(
+                """INSERT INTO proyecto (proyecto_nombre,fecha_inicio,fecha_fin,horas_requeridas,owner_id,
+                proyect_status,porcentaje_avance)
+                VALUES ('Proyecto ejemplo','2026-09-01','2026-09-30',10,2,'en curso',25)"""
+            )
+        )
+        connection.execute(
+            text(
+                """INSERT INTO consumo
+                (proyecto_id,recurso_id,fecha_inicio,fecha_fin,horas_consumidas,tarea,rol_id)
+                VALUES (1,2,'2026-09-02','2026-09-02',3,'Diseño',1)"""
+            )
+        )
+    return app
+
+
+@pytest.fixture
+def client(seeded):
+    with TestClient(seeded) as client:
         yield client
+
+
+def scalar(app, sql, **params):
+    with app.state.engine.connect() as connection:
+        return connection.execute(text(sql), params).scalar()
+
+
+def mutate(client, method, path, data=None):
+    token = client.get('/api/session').json()['csrf_token']
+    return client.request(method, path, json=data or {}, headers={'X-CSRF-Token': token})
+
+
+def post(client, path, data=None):
+    return mutate(client, 'POST', path, data)
+
+
+def login(client, name='admin', password='Proyecto1'):
+    return post(client, '/api/login', {'recurso_nombre': name, 'password': password})
+
+
+def project_data():
+    return dict(
+        proyecto_nombre='Proyecto editado',
+        fecha_inicio='2026-09-01',
+        fecha_fin='2026-09-30',
+        horas_requeridas='10',
+        owner_id='2',
+        proyect_status='en curso',
+        porcentaje_avance='25',
+    )
+
+
+def consumption_data():
+    return dict(
+        proyecto_id='1',
+        recurso_id='2',
+        fecha_inicio='2026-10-01',
+        fecha_fin='2026-10-02',
+        horas_consumidas='12',
+        tarea='Implementación',
+        rol_id='1',
+    )

@@ -84,3 +84,46 @@ Formato de cada entrada: prompt textual → acciones (lecturas, preguntas, decis
 #### Consulta sobre Git
 
 Se preguntó al usuario cómo manejar la evidencia de Git que pide el curso (ramas, commits y PRs). Respuesta: **"Branch + commit per phase"**. Se crea la rama `replatform-fastapi-vue` y se hace al menos un commit por fase; el usuario abre los PR.
+
+#### Fase 2 — Paridad del backend (en curso)
+
+1. Se leyeron los módulos Flask que faltaban (`auth.py`, `resources.py`, `roles.py`, `consumptions.py`, `db.py`) y la suite `tests/test_app.py` con su `conftest.py`, que funcionan como especificación ejecutable.
+2. Se corrió la suite Flask original como línea de base. Antes hubo que instalar `requirements-dev.txt` en `.venv`. Resultado: **66 passed**.
+3. Se revisó qué espera el frontend actual: solo usa la veracidad de `es_admin` y `debe_cambiar_password` y los códigos `unauthorized`, `password_change_required` y `csrf_invalid`. Decisión: la API nueva devuelve booleanos JSON (`true`/`false`) en lugar de `1`/`0`.
+4. Se agregaron las dependencias `pwdlib[argon2]` y `werkzeug`; esta última solo para verificar los hashes scrypt heredados.
+5. Archivos nuevos en `backend/pulso/`:
+   - `errors.py`: `APIError` y el formato de error.
+   - `security.py`: argon2, verificación de hashes heredados con re-hash, y tokens.
+   - `sessions.py`: sesiones del lado del servidor en la tabla `sesion`. La cookie `pulso_session` es HttpOnly y SameSite=Lax, y en la base se guarda solo el hash SHA-256 del token. Las sesiones anónimas duran 2 h y las vencidas se limpian al crear una nueva. El guard se aplica a nivel de router en el mismo orden que Flask: 401 → 403 por cambio de contraseña pendiente → 400 CSRF → 415 → 400 si el cuerpo no es un objeto. También define `current_user` y `require_admin`.
+   - `schemas.py`: validadores Pydantic que reproducen las reglas de `common.py` con los mismos mensajes (rechazan booleanos, NaN e infinito y aceptan cadenas numéricas), más los modelos de entrada y salida para OpenAPI.
+   - `queries.py`: consultas de proyectos con sus agregados y de consumos con nombres.
+   - `routers/auth.py`, `routers/projects.py`, `routers/consumptions.py`, `routers/resources.py`, `routers/roles.py`: el mismo contrato de `docs/API.md`. Los permisos se chequean como dependencias antes de validar el cuerpo, para que un 403 tenga prioridad sobre un 400 (igual que en Flask). La regla del último administrador usa `SELECT … FOR UPDATE`. Cambiar o restablecer una contraseña cierra las otras sesiones de ese usuario.
+   - `main.py`: registra los routers; también maneja los 500 no controlados (siempre como JSON), el límite de 1 MiB (413) y los errores de validación de Pydantic, que se traducen a los mensajes en español. Un parámetro de ruta inválido devuelve 404.
+   - `cli.py`: `init-db` (migra y crea admin/Proyecto1 solo si la base está vacía) e `import-sqlite` (copia la base Flask conservando IDs y hashes, y ajusta las secuencias).
+6. Errores corregidos durante la escritura: en `detail()` quedaba una expresión inválida (`if False else`) y un `filter_by` que apuntaba a la tabla equivocada. Además, `create` agregaba el proyecto a la sesión antes de validar la referencia, con riesgo de autoflush.
+
+### Prompt 3 — Alcance (mensaje enviado durante el trabajo)
+
+> Once we end phase 4 let's stop. Phase 5 will remain for future date. but do phase 6 (documentation)
+
+**Acciones:** se ajustó el alcance. Se completan las Fases 2, 3 y 4 y luego la Fase 6 (documentación). La Fase 5 (reporting, CSV, Gantt y alertas) queda pendiente para más adelante.
+
+#### Fase 2 — Resultados
+
+1. Pruebas: `backend/conftest.py` suma el fixture `seeded`, con los mismos datos que la suite Flask, y los helpers `login`, `mutate`, `post` y `scalar`. `backend/tests/test_api.py` porta **todas** las pruebas de `tests/test_app.py` y agrega otras nuevas:
+   - flags de la cookie de sesión y login sin distinguir mayúsculas;
+   - cierre de las otras sesiones al cambiar la contraseña;
+   - aceptación y re-hash a argon2 de un hash werkzeug heredado;
+   - mensajes de validación en español;
+   - orden de catálogos sin distinguir mayúsculas;
+   - `responsable` no numérico → 400, e ID de ruta no numérico → 404;
+   - límite de 413 y errores 500 no controlados siempre como JSON.
+2. Resultado: `uv run pytest -q` → **78 passed** en el primer intento; `ruff check` y `ruff format` sin errores (tras ajustar tres líneas largas y usar la sintaxis de genéricos de Python 3.12).
+3. Importación real: se copió `instance/proyectos.sqlite` al scratchpad (el original no se tocó) y se importó en una base Postgres descartable con `python -m pulso.cli import-sqlite`. Resultados:
+   - Filas: 1 recurso, 3 roles, 1 proyecto y 1 consumo.
+   - Agregados idénticos: 560 h requeridas, 12 h consumidas, saldo 548.
+   - Las secuencias quedaron ajustadas (el próximo `rol_id` es 4) y el hash scrypt heredado se conservó.
+   - `init-db` posterior no creó otro admin.
+   - La base descartable se eliminó al terminar.
+4. `compose.yaml` y el `Dockerfile` ahora ejecutan `python -m pulso.cli init-db` al arrancar (migración + admin inicial). Log del contenedor: "Base inicializada. Usuario inicial: admin / Proyecto1."
+5. Compatibilidad: el frontend **actual** (`frontend/server.py`, puerto de prueba 8010) funcionó sin cambios contra la API FastAPI. Sesión, login y bloqueo por cambio de contraseña pendiente (`password_change_required`) respondieron igual que con Flask.
