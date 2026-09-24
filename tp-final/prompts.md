@@ -156,3 +156,28 @@ Se preguntó al usuario cómo manejar la evidencia de Git que pide el curso (ram
    - Fallas en las propias pruebas, ya corregidas: Vite escuchaba en IPv6 (se agregó `--host 127.0.0.1`), un selector ambiguo "Nueva contraseña" (se usa `exact`) y una carrera en el helper de login (ahora espera la redirección).
 8. Revisión visual con capturas de login, proyectos y detalle: el diseño coincide con la versión anterior.
 9. Se eliminaron `frontend/app.js`, `api.js`, `ui.js` y `server.py` y sus pruebas (`tests/frontend.test.mjs` y `tests/test_frontend_server.py`). `styles.css` pasó a `src/styles/main.css`. CI suma el job `frontend` (tipos generados, build, Vitest y Playwright).
+
+#### Fase 4 — Despliegue
+
+1. Archivos nuevos:
+   - `deploy/Caddyfile`: HTTPS automático (en `localhost` usa la CA local de Caddy) y proxy de `/api/*` a `api:5000` con límite de cuerpo de 1 MB. Sirve la SPA con `try_files` hacia `index.html` y los encabezados CSP (sin scripts en línea), HSTS, `X-Frame-Options` y `nosniff`. Los assets con hash llevan caché inmutable y las páginas `no-cache`.
+   - `deploy/web.Dockerfile`: build de Vue con Node 22 y resultado copiado a una imagen `caddy:2-alpine`.
+   - `compose.prod.yaml` con cuatro servicios:
+     - `web` (Caddy);
+     - `api`: `init-db` + uvicorn con `--workers` y `--proxy-headers`, `COOKIE_SECURE=1`, y `SECRET_KEY`/`POSTGRES_PASSWORD` obligatorios;
+     - `db` (Postgres 16 con healthcheck);
+     - `backup`: `pg_dump` diario comprimido en `./backups` con retención de `BACKUP_DAYS` días.
+   - `.env.example` (plantilla de secretos y dominio) y `.dockerignore`. Se agregaron `backups/`, `frontend/node_modules/` y `frontend/dist/` a `.gitignore`.
+   - El servicio `worker` para las alertas se difiere a la Fase 5, junto con la funcionalidad que lo necesita.
+2. **Verificación local del stack de producción** con podman (proyecto `pulso-prod`, puertos 8080/8443 y un `.env` descartable en el scratchpad):
+   - Las cuatro imágenes y contenedores levantaron.
+   - `/proyectos/1` → 200 con CSP, HSTS y `X-Frame-Options: DENY`; `/assets/*.js` → `immutable`.
+   - Login por HTTPS → cookie `pulso_session` con `HttpOnly; SameSite=lax; Secure`. Cuerpo de 1,1 MB → **413**; `/api/docs` → 200.
+   - El servicio de backup generó `pulso-2026-09-24.sql.gz`.
+   - Chromium (Playwright) sobre `https://localhost:8443`: redirección a login, login y cambio de contraseña forzado, estilos cargados y **sin errores de CSP ni de consola**.
+   - Hallazgo corregido: las URL profundas de la SPA no recibían `Cache-Control: no-cache`, porque el matcher evaluaba la ruta original. Se cambió a `not path /assets/*`. Además `podman-compose up --build` no recreaba el contenedor y hubo que usar `--force-recreate`.
+   - Al terminar se eliminaron los contenedores, volúmenes y el backup de prueba.
+3. **Retiro de la versión Flask** (ya verificada la paridad): se eliminaron `app/`, `requirements.txt`, `requirements-dev.txt` y `tests/` (la suite Flask ya está portada en `backend/tests/`). Siguen disponibles en el historial de Git y en la copia congelada `tp-final - Flask/`. **No** se tocó `instance/proyectos.sqlite`, que son datos del usuario y la fuente para `import-sqlite`. El `.venv` viejo de la raíz de tp-final quedó sin usar y no se borró.
+4. CI suma el job `images`, que construye las imágenes de la API y la web después de backend y frontend.
+5. La suite del backend sigue en **78 passed** sin el paquete Flask.
+6. Aparte: se detectó que `FEATURE_PLAN.md` (en la raíz del repo) tiene cambios del usuario, con estados de avance. No se incluyeron en los commits del asistente.

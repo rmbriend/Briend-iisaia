@@ -6,3 +6,6 @@ instance/
 
 # backend (FastAPI)
 .ruff_cache/
+backups/
+frontend/node_modules/
+frontend/dist/
