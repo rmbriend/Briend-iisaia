@@ -156,3 +156,7 @@ El workflow de CI `.github/workflows/tp-final.yml` corre todo lo anterior y adem
 ## Email de recursos
 
 El formulario de alta y edición permite cargar un email opcional con formato `nombre@empresa.com`. El navegador y la API validan el formato; no se verifica que la casilla exista ni se envían correos. La migración Alembic `0002` agrega la columna nullable y conserva los usuarios existentes sin inventar direcciones. Aplicar con `cd backend` y `uv run alembic upgrade head` (el arranque en Compose también aplica migraciones).
+
+### Acceso local en Windows
+
+Abrir `http://127.0.0.1:5173`. Vite escucha explícitamente en IPv4 para evitar que `localhost` se resuelva únicamente como `::1`. La conexión PostgreSQL local también utiliza `127.0.0.1`, con un tiempo máximo de conexión de 5 segundos. Si se configura DATABASE_URL, su valor tiene prioridad sobre este valor predeterminado. Si el puerto del frontend está ocupado, Vite informa el conflicto en lugar de cambiarlo silenciosamente.
