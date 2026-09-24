@@ -127,3 +127,32 @@ Se preguntó al usuario cómo manejar la evidencia de Git que pide el curso (ram
    - La base descartable se eliminó al terminar.
 4. `compose.yaml` y el `Dockerfile` ahora ejecutan `python -m pulso.cli init-db` al arrancar (migración + admin inicial). Log del contenedor: "Base inicializada. Usuario inicial: admin / Proyecto1."
 5. Compatibilidad: el frontend **actual** (`frontend/server.py`, puerto de prueba 8010) funcionó sin cambios contra la API FastAPI. Sesión, login y bloqueo por cambio de contraseña pendiente (`password_change_required`) respondieron igual que con Flask.
+
+#### Fase 3 — Paridad del frontend (Vue 3 + TypeScript)
+
+1. Se leyó completo el frontend anterior (`app.js`, `ui.js` y `styles.css`) para reproducir pantallas, textos y reglas.
+2. **Desviación del plan, justificada:** en esta fase de paridad **no** se incorporó PrimeVue. Se portó el diseño propio existente (CSS propio sobre Bootstrap, ahora empaquetado desde npm en lugar del CDN) para mantener la apariencia idéntica y un bundle chico. PrimeVue y ECharts quedan para la Fase 5, donde se necesitan tablas de datos, cargas de archivos y gráficos.
+3. Proyecto Vite en `tp-final/frontend/`:
+   - Dependencias: Vue 3.5, Vue Router 5, Pinia 4, TanStack Query, openapi-fetch y Bootstrap. De desarrollo: Vite 8, vue-tsc, Vitest, @vue/test-utils, jsdom, openapi-typescript y Playwright.
+   - npm instaló TypeScript 7, pero openapi-typescript pide `^5.x`, así que se fijó **TypeScript ~5.9.3**.
+4. **Contrato tipado:** `backend/pulso/openapi.py` exporta el esquema sin necesitar base de datos. `npm run gen:api` genera `openapi.json` y `src/api/schema.d.ts`. CI verifica que los tipos generados estén actualizados.
+5. Código:
+   - `src/api/client.ts`: cliente con token CSRF rotado solo en mutaciones y mapeo al contrato de errores. Los errores de red o de respuesta inválida tienen mensajes en español y nada se reintenta automáticamente.
+   - `stores/session.ts` (Pinia).
+   - `composables/notice.ts`: misma reacción a errores que antes (401 → login, `password_change_required` → cambio de contraseña, `csrf_invalid` → renovar el token sin reintentar).
+   - `composables/submit.ts`: los formularios conservan lo ingresado si hay error.
+   - `router.ts`: se relee la sesión en cada navegación y las reglas de redirección están en `redirectFor`.
+   - Componentes: `AppHeader`, `PageHeading`, `StatGrid`, `ProgressBar`, `LoadState`, `TextField`, `SelectField`, `FormShell`, `DeleteButton` y `ConsumptionTable`.
+   - 12 vistas con las mismas rutas que antes. Vue escapa todo el contenido y nunca se usa `v-html`.
+6. Ajustes durante el trabajo:
+   - Se quitó `novalidate` para conservar la validación nativa del navegador.
+   - `DeleteButton` ahora navega antes de invalidar la caché, para no volver a pedir un registro ya eliminado.
+   - El cliente usa como `baseUrl` el origen de la página, porque en Node `Request` exige URL absolutas.
+   - `fetch` se resuelve en cada llamada, porque openapi-fetch lo capturaba al crearse y los tests no podían reemplazarlo.
+7. **Pruebas:**
+   - `vue-tsc` sin errores y `npm run build` OK (bundle principal de ~30 kB gzip).
+   - Vitest: **9 passed**. Cubren el cliente (CSRF, 204, errores sin reintento, red y respuesta inválida), el escape de contenido hostil y los permisos en la tabla de consumos, y las reglas de navegación.
+   - Playwright (Chromium headless) sobre el stack real: la API en el puerto 5001 con la base `pulso_e2e` recreada en cada corrida (`e2e/start-api.sh`) y Vite con proxy. Resultado: **5 passed**. Cubren cambio forzado de contraseña; alta de usuario, rol y proyecto (con nombre hostil escapado); usuario común registrando horas con un error de fechas que conserva el formulario, exceso de 5,5 h y avance manual intacto; redirección desde rutas de admin; logout; recarga de una URL profunda; eliminación, y login en móvil sin scroll horizontal.
+   - Fallas en las propias pruebas, ya corregidas: Vite escuchaba en IPv6 (se agregó `--host 127.0.0.1`), un selector ambiguo "Nueva contraseña" (se usa `exact`) y una carrera en el helper de login (ahora espera la redirección).
+8. Revisión visual con capturas de login, proyectos y detalle: el diseño coincide con la versión anterior.
+9. Se eliminaron `frontend/app.js`, `api.js`, `ui.js` y `server.py` y sus pruebas (`tests/frontend.test.mjs` y `tests/test_frontend_server.py`). `styles.css` pasó a `src/styles/main.css`. CI suma el job `frontend` (tipos generados, build, Vitest y Playwright).
