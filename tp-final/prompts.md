@@ -207,3 +207,14 @@ Se preguntó al usuario cómo manejar la evidencia de Git que pide el curso (ram
    - `down -v`, stack nuevo (con `init-db` sembrando su propio admin) y restauración con el comando del README: **sin errores**. El login con `Respaldo123` dio 200, el proyecto "Proyecto respaldado" volvió y quedó 1 solo recurso.
 4. Se actualizaron la sección de restauración del README (detener `api`, restaurar, iniciar `api`) y `docs/VALIDACION.md`, que ahora refleja lo realmente verificado. Luego se eliminaron los contenedores, volúmenes, backups y el `.env` de prueba.
 5. Notas para el usuario (sin acción): el workflow de CI nunca se ejecutó, porque la rama no se subió; siguen corriendo los contenedores de desarrollo (`db`, `mailpit` y `api` en :5000); quedaron instalados `podman-compose` (herramienta de uv) y Chromium de Playwright (~114 MB); el `.venv` viejo de tp-final quedó sin uso; `SECRET_KEY` sigue siendo obligatoria, pero la API actual no la usa porque las sesiones viven en la base.
+
+### Prompt 4 — Cómo acceder a la aplicación
+
+> how can i access this tool now? did you update the instructions to mount locally?
+
+**Acciones:**
+
+1. Se revisó el estado local: los contenedores de desarrollo `db`, `mailpit` y `api` seguían corriendo (API en `:5000`, health `ok`), con una base nueva que solo tiene `admin` / `Proyecto1` (cambio pendiente) y ningún proyecto.
+2. Se inició el servidor de desarrollo de Vite en segundo plano (`npx vite --host 127.0.0.1 --port 5173`). Se verificó `/proyectos` → 200 y `/api/session` respondiendo a través del proxy de Vite.
+3. Se confirmó que las instrucciones para levantar la app localmente están en la sección "Desarrollo local" de `tp-final/README.md` (y, en inglés, en el `CLAUDE.md` local).
+4. Se detectó un hueco en la documentación: `import-sqlite` exige una base vacía, pero el flujo de desarrollo corre `init-db` primero (que crea el admin), así que la importación de los datos anteriores se niega. Se informó al usuario y se ofreció resolverlo.
