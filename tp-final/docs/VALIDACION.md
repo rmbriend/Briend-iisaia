@@ -34,7 +34,11 @@ La base real `instance/proyectos.sqlite` se copió y se importó en una base Pos
 - CSP, HSTS y `X-Frame-Options` en las páginas.
 - Assets con caché inmutable y páginas con `no-cache`.
 - Cookie `Secure`, 413 para cuerpos de más de 1 MB y `/api/docs` accesible.
-- Backup diario generado.
+- Backups:
+  - Primera versión: el dump inicial podía correr antes de las migraciones, y `&&` solo miraba el código de salida de gzip.
+  - Corrección: el servicio espera a `alembic_version`, usa `pipefail` y escribe a un archivo temporal, con `--clean --if-exists`.
+  - Verificado: el primer dump automático contiene las 6 tablas. Se crearon datos reales por la API (cambio de contraseña, rol y proyecto) y se generó un dump con ellos.
+  - Se eliminaron los volúmenes y se levantó un stack nuevo, que `init-db` inicializó con su propio admin. Luego se restauró con el comando del README: sin errores, el login funcionó con la contraseña respaldada, el proyecto volvió y quedó un único administrador.
 - En Chromium: login y cambio de contraseña forzado sin errores de CSP ni de consola.
 
 Los contenedores y volúmenes de prueba se eliminaron al terminar.

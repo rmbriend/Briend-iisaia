@@ -61,8 +61,17 @@ services:
       - sh
       - -c
       - |
+        set -o pipefail
+        # Wait for the api's migrations, so the first dump is never an empty schema.
+        until psql -tAc "SELECT 1 FROM alembic_version" pulso 2>/dev/null | grep -q 1; do sleep 5; done
         while true; do
-          pg_dump pulso | gzip > /backups/pulso-$$(date +%F).sql.gz && echo "backup ok $$(date)"
+          file=/backups/pulso-$$(date +%F).sql.gz
+          # --clean --if-exists: the dump can be restored over a database initialized by init-db.
+          if pg_dump --clean --if-exists pulso | gzip > $$file.tmp; then
+            mv $$file.tmp $$file && echo "backup ok $$file"
+          else
+            rm -f $$file.tmp && echo "backup FAILED $$(date)" >&2
+          fi
           find /backups -name 'pulso-*.sql.gz' -mtime +$$BACKUP_DAYS -delete
           sleep 86400
         done

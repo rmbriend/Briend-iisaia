@@ -89,7 +89,15 @@ docker compose -f compose.prod.yaml --env-file .env up -d --build
 - `web`: Caddy obtiene el certificado HTTPS de `PULSO_DOMAIN` (los puertos 80 y 443 tienen que ser accesibles). Aplica CSP estricta, HSTS, límite de 1 MB para `/api` y caché inmutable para los assets con hash.
 - `api`: aplica las migraciones al arrancar y usa cookies `Secure`. El número de procesos se ajusta con `API_WORKERS`.
 - `db`: PostgreSQL con volumen persistente.
-- `backup`: guarda un `pg_dump` comprimido por día en `./backups` y conserva `BACKUP_DAYS` días. Para restaurar: `gunzip -c backups/pulso-AAAA-MM-DD.sql.gz | docker compose -f compose.prod.yaml exec -T db psql -U pulso pulso`.
+- `backup`: espera a que la API haya migrado la base, luego guarda un `pg_dump --clean --if-exists` comprimido por día en `./backups` y conserva `BACKUP_DAYS` días. Si un dump falla, se descarta y se registra `backup FAILED`.
+
+Para restaurar (también sirve sobre una instalación nueva, ya inicializada por `init-db`):
+
+```bash
+docker compose -f compose.prod.yaml stop api
+gunzip -c backups/pulso-AAAA-MM-DD.sql.gz | docker compose -f compose.prod.yaml exec -T db psql -U pulso pulso
+docker compose -f compose.prod.yaml start api
+```
 
 Cambiar `SECRET_KEY` no invalida las sesiones, que viven en la base de datos. Para cerrar todas las sesiones, vaciar la tabla `sesion`.
 

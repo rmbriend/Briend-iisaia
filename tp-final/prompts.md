@@ -196,3 +196,14 @@ Se preguntó al usuario cómo manejar la evidencia de Git que pide el curso (ram
 6. `HISTORIAL_DESARROLLO.md` y `docs/HISTORIAL_DESARROLLO.md` (hay dos copias idénticas): sección 19, que resume esta etapa y remite a `prompts.md`.
 7. `CLAUDE.md` en la raíz del repo, ignorado por Git y por lo tanto solo local: se reescribieron la arquitectura, la ejecución y las pruebas de tp-final para el stack nuevo.
 8. **Estado final:** Fases 1, 2, 3, 4 y 6 completas. La Fase 5 (reporting, CSV, Gantt y alertas) queda pendiente, según lo pedido en el Prompt 3.
+
+#### Revisión final — Verificación real de los backups
+
+1. La revisión final (advisor) señaló que el backup se había dado por verificado sin estarlo. El primer dump (370 bytes) probablemente corrió antes de que la API migrara la base; en `pg_dump | gzip && echo ok` el `&&` solo evalúa gzip, así que un fallo quedaba oculto; y la restauración documentada chocaría con las tablas y el admin que crea `init-db`.
+2. Corrección en `compose.prod.yaml`: el servicio `backup` espera a que exista `alembic_version`, usa `set -o pipefail`, escribe a un `.tmp` y lo renombra solo si el dump tuvo éxito (si no, registra `backup FAILED`), y usa `pg_dump --clean --if-exists`.
+3. Verificación con un stack de producción descartable:
+   - El primer dump automático contiene las 6 tablas.
+   - Por la API se cambió la contraseña del admin a `Respaldo123` y se crearon un rol y un proyecto; el dump (el mismo comando que el loop) incluye sus datos.
+   - `down -v`, stack nuevo (con `init-db` sembrando su propio admin) y restauración con el comando del README: **sin errores**. El login con `Respaldo123` dio 200, el proyecto "Proyecto respaldado" volvió y quedó 1 solo recurso.
+4. Se actualizaron la sección de restauración del README (detener `api`, restaurar, iniciar `api`) y `docs/VALIDACION.md`, que ahora refleja lo realmente verificado. Luego se eliminaron los contenedores, volúmenes, backups y el `.env` de prueba.
+5. Notas para el usuario (sin acción): el workflow de CI nunca se ejecutó, porque la rama no se subió; siguen corriendo los contenedores de desarrollo (`db`, `mailpit` y `api` en :5000); quedaron instalados `podman-compose` (herramienta de uv) y Chromium de Playwright (~114 MB); el `.venv` viejo de tp-final quedó sin uso; `SECRET_KEY` sigue siendo obligatoria, pero la API actual no la usa porque las sesiones viven en la base.
