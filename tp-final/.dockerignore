@@ -1,0 +1,8 @@
+.venv
+**/node_modules
+frontend/dist
+frontend/test-results
+backend
+instance
+backups
+.env

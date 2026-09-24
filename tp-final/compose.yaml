@@ -1,0 +1,42 @@
+# Development environment: `podman compose up -d` (or `docker compose up -d`).
+# Postgres on localhost:5432, Mailpit UI on http://localhost:8025 (SMTP on 1025).
+services:
+  db:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: pulso
+      POSTGRES_PASSWORD: pulso
+      POSTGRES_DB: pulso
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulso -d pulso"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: docker.io/axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+
+  api:
+    build: ./backend
+    command: sh -c "python -m pulso.cli init-db && uvicorn pulso.asgi:app --host 0.0.0.0 --port 5000 --reload"
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-}  # obligatorio para la API (>= 32 caracteres)
+      DATABASE_URL: postgresql+psycopg://pulso:pulso@db:5432/pulso
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - ./backend/pulso:/app/pulso:Z
+      - ./backend/migrations:/app/migrations:Z
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

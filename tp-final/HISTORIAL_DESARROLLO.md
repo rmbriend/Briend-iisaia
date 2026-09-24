@@ -273,3 +273,12 @@ La última acción de navegación para dejar abierta la aplicación real en el p
 La aplicación evolucionó de una solución Flask con páginas renderizadas en el servidor a una arquitectura con frontend HTML/JavaScript/CSS y backend API Flask, manteniendo SQLite y las reglas de negocio acordadas.
 
 El proceso combinó aclaración de requisitos, planificación aprobada por el usuario, implementación, pruebas automatizadas, revisión visual y documentación. La solicitud posterior de separación tecnológica se implementó conservando la base existente.
+
+## 19. Replataforma FastAPI + Vue + PostgreSQL (2026-09-23)
+
+La etapa siguiente se registra prompt por prompt, con cada acción, en [prompts.md](prompts.md). En resumen:
+
+- Se revisó la arquitectura con el objetivo de un despliegue real para un equipo chico.
+- Se eligieron FastAPI, Vue 3 + TypeScript, PostgreSQL, sesión por cookie con CSRF, y Docker Compose con Caddy.
+- Se ejecutó en fases, con un commit por fase en la rama `replatform-fastapi-vue`: fundamentos, paridad del backend, paridad del frontend, despliegue y documentación.
+- Las funcionalidades nuevas del roadmap (Fase 5) quedaron para más adelante.

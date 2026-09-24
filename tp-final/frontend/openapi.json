@@ -1,0 +1,1599 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Pulso API",
+    "version": "0.2.0"
+  },
+  "paths": {
+    "/api/session": {
+      "get": {
+        "tags": [
+          "sesión"
+        ],
+        "summary": "Current Session",
+        "operationId": "current_session_api_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "tags": [
+          "sesión"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "tags": [
+          "sesión"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/password": {
+      "put": {
+        "tags": [
+          "sesión"
+        ],
+        "summary": "Change Password",
+        "operationId": "change_password_api_password_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogos": {
+      "get": {
+        "tags": [
+          "proyectos"
+        ],
+        "summary": "Catalogs",
+        "operationId": "catalogs_api_catalogos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalogos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/proyectos": {
+      "get": {
+        "tags": [
+          "proyectos"
+        ],
+        "summary": "Index",
+        "operationId": "index_api_proyectos_get",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Estado"
+            }
+          },
+          {
+            "name": "responsable",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Responsable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProyectoResumen"
+                  },
+                  "title": "Response Index Api Proyectos Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "proyectos"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_proyectos_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProyectoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProyectoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/proyectos/{identifier}": {
+      "get": {
+        "tags": [
+          "proyectos"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_proyectos__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProyectoDetalle"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "proyectos"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_proyectos__identifier__put",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProyectoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProyectoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "proyectos"
+        ],
+        "summary": "Remove",
+        "operationId": "remove_api_proyectos__identifier__delete",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/consumos": {
+      "get": {
+        "tags": [
+          "consumos"
+        ],
+        "summary": "Index",
+        "operationId": "index_api_consumos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConsumoListado"
+                  },
+                  "type": "array",
+                  "title": "Response Index Api Consumos Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "consumos"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_consumos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/consumos/{identifier}": {
+      "get": {
+        "tags": [
+          "consumos"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_consumos__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "consumos"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_consumos__identifier__put",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "consumos"
+        ],
+        "summary": "Remove",
+        "operationId": "remove_api_consumos__identifier__delete",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recursos": {
+      "get": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Index",
+        "operationId": "index_api_recursos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioOut"
+                  },
+                  "type": "array",
+                  "title": "Response Index Api Recursos Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_recursos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecursoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recursos/{identifier}": {
+      "get": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_recursos__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_recursos__identifier__put",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecursoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Remove",
+        "operationId": "remove_api_recursos__identifier__delete",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Index",
+        "operationId": "index_api_roles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RolOut"
+                  },
+                  "type": "array",
+                  "title": "Response Index Api Roles Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_roles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{identifier}": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_roles__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_roles__identifier__put",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Remove",
+        "operationId": "remove_api_roles__identifier__delete",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "sistema"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Catalogos": {
+        "properties": {
+          "estados": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Estados"
+          },
+          "recursos": {
+            "items": {
+              "$ref": "#/components/schemas/RecursoRef"
+            },
+            "type": "array",
+            "title": "Recursos"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RolOut"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estados",
+          "recursos",
+          "roles"
+        ],
+        "title": "Catalogos"
+      },
+      "ConsumoIn": {
+        "properties": {
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Fin"
+          },
+          "proyecto_id": {
+            "type": "integer",
+            "title": "Proyecto Id"
+          },
+          "recurso_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurso Id"
+          },
+          "horas_consumidas": {
+            "type": "number",
+            "title": "Horas Consumidas"
+          },
+          "tarea": {
+            "type": "string",
+            "title": "Tarea"
+          },
+          "rol_id": {
+            "type": "integer",
+            "title": "Rol Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fecha_inicio",
+          "fecha_fin",
+          "proyecto_id",
+          "horas_consumidas",
+          "tarea",
+          "rol_id"
+        ],
+        "title": "ConsumoIn"
+      },
+      "ConsumoListado": {
+        "properties": {
+          "consumo_id": {
+            "type": "integer",
+            "title": "Consumo Id"
+          },
+          "proyecto_id": {
+            "type": "integer",
+            "title": "Proyecto Id"
+          },
+          "recurso_id": {
+            "type": "integer",
+            "title": "Recurso Id"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Fin"
+          },
+          "horas_consumidas": {
+            "type": "number",
+            "title": "Horas Consumidas"
+          },
+          "tarea": {
+            "type": "string",
+            "title": "Tarea"
+          },
+          "rol_id": {
+            "type": "integer",
+            "title": "Rol Id"
+          },
+          "proyecto_nombre": {
+            "type": "string",
+            "title": "Proyecto Nombre"
+          },
+          "recurso_nombre": {
+            "type": "string",
+            "title": "Recurso Nombre"
+          },
+          "rol_descripcion": {
+            "type": "string",
+            "title": "Rol Descripcion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consumo_id",
+          "proyecto_id",
+          "recurso_id",
+          "fecha_inicio",
+          "fecha_fin",
+          "horas_consumidas",
+          "tarea",
+          "rol_id",
+          "proyecto_nombre",
+          "recurso_nombre",
+          "rol_descripcion"
+        ],
+        "title": "ConsumoListado"
+      },
+      "ConsumoOut": {
+        "properties": {
+          "consumo_id": {
+            "type": "integer",
+            "title": "Consumo Id"
+          },
+          "proyecto_id": {
+            "type": "integer",
+            "title": "Proyecto Id"
+          },
+          "recurso_id": {
+            "type": "integer",
+            "title": "Recurso Id"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Fin"
+          },
+          "horas_consumidas": {
+            "type": "number",
+            "title": "Horas Consumidas"
+          },
+          "tarea": {
+            "type": "string",
+            "title": "Tarea"
+          },
+          "rol_id": {
+            "type": "integer",
+            "title": "Rol Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consumo_id",
+          "proyecto_id",
+          "recurso_id",
+          "fecha_inicio",
+          "fecha_fin",
+          "horas_consumidas",
+          "tarea",
+          "rol_id"
+        ],
+        "title": "ConsumoOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginIn": {
+        "properties": {
+          "recurso_nombre": {
+            "type": "string",
+            "title": "Recurso Nombre"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recurso_nombre",
+          "password"
+        ],
+        "title": "LoginIn"
+      },
+      "PasswordIn": {
+        "properties": {
+          "actual": {
+            "type": "string",
+            "title": "Actual"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "confirmacion": {
+            "type": "string",
+            "title": "Confirmacion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "actual",
+          "password",
+          "confirmacion"
+        ],
+        "title": "PasswordIn"
+      },
+      "ProyectoDetalle": {
+        "properties": {
+          "proyecto": {
+            "$ref": "#/components/schemas/ProyectoResumen"
+          },
+          "consumos": {
+            "items": {
+              "$ref": "#/components/schemas/ConsumoListado"
+            },
+            "type": "array",
+            "title": "Consumos"
+          },
+          "por_recurso": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Por Recurso"
+          },
+          "por_rol": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Por Rol"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proyecto",
+          "consumos",
+          "por_recurso",
+          "por_rol"
+        ],
+        "title": "ProyectoDetalle"
+      },
+      "ProyectoIn": {
+        "properties": {
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Fin"
+          },
+          "proyecto_nombre": {
+            "type": "string",
+            "title": "Proyecto Nombre"
+          },
+          "horas_requeridas": {
+            "type": "number",
+            "title": "Horas Requeridas"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          },
+          "proyect_status": {
+            "type": "string",
+            "title": "Proyect Status"
+          },
+          "porcentaje_avance": {
+            "type": "number",
+            "title": "Porcentaje Avance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fecha_inicio",
+          "fecha_fin",
+          "proyecto_nombre",
+          "horas_requeridas",
+          "proyect_status",
+          "porcentaje_avance"
+        ],
+        "title": "ProyectoIn"
+      },
+      "ProyectoOut": {
+        "properties": {
+          "proyecto_id": {
+            "type": "integer",
+            "title": "Proyecto Id"
+          },
+          "proyecto_nombre": {
+            "type": "string",
+            "title": "Proyecto Nombre"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Fin"
+          },
+          "horas_requeridas": {
+            "type": "number",
+            "title": "Horas Requeridas"
+          },
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "proyect_status": {
+            "type": "string",
+            "title": "Proyect Status"
+          },
+          "porcentaje_avance": {
+            "type": "number",
+            "title": "Porcentaje Avance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proyecto_id",
+          "proyecto_nombre",
+          "fecha_inicio",
+          "fecha_fin",
+          "horas_requeridas",
+          "owner_id",
+          "proyect_status",
+          "porcentaje_avance"
+        ],
+        "title": "ProyectoOut"
+      },
+      "ProyectoResumen": {
+        "properties": {
+          "proyecto_id": {
+            "type": "integer",
+            "title": "Proyecto Id"
+          },
+          "proyecto_nombre": {
+            "type": "string",
+            "title": "Proyecto Nombre"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Fin"
+          },
+          "horas_requeridas": {
+            "type": "number",
+            "title": "Horas Requeridas"
+          },
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "proyect_status": {
+            "type": "string",
+            "title": "Proyect Status"
+          },
+          "porcentaje_avance": {
+            "type": "number",
+            "title": "Porcentaje Avance"
+          },
+          "responsable": {
+            "type": "string",
+            "title": "Responsable"
+          },
+          "horas_consumidas": {
+            "type": "number",
+            "title": "Horas Consumidas"
+          },
+          "saldo": {
+            "type": "number",
+            "title": "Saldo"
+          },
+          "exceso": {
+            "type": "number",
+            "title": "Exceso"
+          },
+          "porcentaje_consumo": {
+            "type": "number",
+            "title": "Porcentaje Consumo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proyecto_id",
+          "proyecto_nombre",
+          "fecha_inicio",
+          "fecha_fin",
+          "horas_requeridas",
+          "owner_id",
+          "proyect_status",
+          "porcentaje_avance",
+          "responsable",
+          "horas_consumidas",
+          "saldo",
+          "exceso",
+          "porcentaje_consumo"
+        ],
+        "title": "ProyectoResumen"
+      },
+      "RecursoIn": {
+        "properties": {
+          "recurso_nombre": {
+            "type": "string",
+            "title": "Recurso Nombre"
+          },
+          "es_admin": {
+            "type": "boolean",
+            "title": "Es Admin",
+            "default": false
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "recurso_nombre"
+        ],
+        "title": "RecursoIn"
+      },
+      "RecursoRef": {
+        "properties": {
+          "recurso_id": {
+            "type": "integer",
+            "title": "Recurso Id"
+          },
+          "recurso_nombre": {
+            "type": "string",
+            "title": "Recurso Nombre"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recurso_id",
+          "recurso_nombre"
+        ],
+        "title": "RecursoRef"
+      },
+      "RolIn": {
+        "properties": {
+          "rol_descripcion": {
+            "type": "string",
+            "title": "Rol Descripcion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rol_descripcion"
+        ],
+        "title": "RolIn"
+      },
+      "RolOut": {
+        "properties": {
+          "rol_id": {
+            "type": "integer",
+            "title": "Rol Id"
+          },
+          "rol_descripcion": {
+            "type": "string",
+            "title": "Rol Descripcion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rol_id",
+          "rol_descripcion"
+        ],
+        "title": "RolOut"
+      },
+      "SesionOut": {
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsuarioOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "csrf_token": {
+            "type": "string",
+            "title": "Csrf Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "csrf_token"
+        ],
+        "title": "SesionOut"
+      },
+      "UsuarioOut": {
+        "properties": {
+          "recurso_id": {
+            "type": "integer",
+            "title": "Recurso Id"
+          },
+          "recurso_nombre": {
+            "type": "string",
+            "title": "Recurso Nombre"
+          },
+          "es_admin": {
+            "type": "boolean",
+            "title": "Es Admin"
+          },
+          "debe_cambiar_password": {
+            "type": "boolean",
+            "title": "Debe Cambiar Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recurso_id",
+          "recurso_nombre",
+          "es_admin",
+          "debe_cambiar_password"
+        ],
+        "title": "UsuarioOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

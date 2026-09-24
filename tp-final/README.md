@@ -1,44 +1,105 @@
-# Pulso — Frontend web y API de proyectos
+# Pulso — Seguimiento de proyectos y dedicación
 
-Aplicación en español para registrar dedicación y avance de proyectos, dividida en dos componentes:
+Aplicación web en español para registrar la dedicación del equipo y seguir el avance de los proyectos. Está pensada para un equipo chico y busca ser **simple de usar, pero útil** para gestionar proyectos.
 
-- **Frontend:** HTML, JavaScript nativo (módulos ES) y CSS en `frontend/`. Consume JSON con `fetch`; no utiliza plantillas Jinja ni necesita compilarse. Bootstrap aporta estilos base.
-- **Backend:** API Flask en `app/`, sin páginas HTML. SQLite persiste los datos en `instance/proyectos.sqlite`.
+Tiene dos componentes independientes:
 
-## Ejecutar
+- **Frontend** (`frontend/`): Vue 3 + TypeScript, compilado con Vite. Usa Vue Router, Pinia y TanStack Query, y un cliente HTTP **tipado a partir del esquema OpenAPI** de la API.
+- **Backend** (`backend/`): API JSON con FastAPI, SQLAlchemy 2 y migraciones Alembic sobre **PostgreSQL 16**. No genera páginas HTML.
 
-Requiere Python 3.11 o posterior. Desde `tp-final`, preparar una vez:
+En producción, **Caddy** sirve el frontend compilado, termina HTTPS y reenvía `/api/*` a la API, de modo que el navegador trabaja con un solo origen (cookie de sesión + CSRF).
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+## Arquitectura
+
+```text
+Navegador (SPA Vue, archivos estáticos)
+   │ mismo origen · cookie HttpOnly pulso_session · encabezado X-CSRF-Token
+   ▼
+Caddy — HTTPS automático, CSP, sirve dist/ y hace proxy de /api/*       (desarrollo: servidor Vite)
+   ▼
+API FastAPI (uvicorn, N workers) — autenticación, permisos, validación, agregados
+   ▼
+PostgreSQL 16 (+ backup diario con pg_dump)
 ```
 
-**Terminal 1 — API, puerto 5000:**
+- El frontend maneja la navegación, los formularios y los mensajes. Vue escapa todo el contenido; no se usa `v-html`. No se guardan credenciales ni tokens en `localStorage`.
+- La API verifica **todos** los permisos, aunque se la llame directamente, y nunca devuelve hashes de contraseñas. Los totales (saldo, exceso, % de consumo) se calculan en el backend.
+- **Sesiones** del lado del servidor, en la tabla `sesion`. La cookie solo lleva un token aleatorio; en la base se guarda su hash SHA-256. El token CSRF se renueva en login, logout y cambio de contraseña.
+- **Contraseñas** con argon2id. Los hashes scrypt de la versión Flask se aceptan y se re-hashean automáticamente en el siguiente login.
+- Contrato HTTP: [docs/API.md](docs/API.md). Documentación interactiva: `/api/docs`, y esquema en `/api/openapi.json`.
 
-```powershell
-$env:SECRET_KEY = & .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
-.\.venv\Scripts\python.exe -m flask --app app init-db
-.\.venv\Scripts\python.exe -m flask --app app run --host 127.0.0.1 --port 5000
+```text
+backend/
+  pulso/main.py          create_app(): routers, contrato de errores, límites y encabezados
+  pulso/sessions.py      sesiones, CSRF y guard aplicado a cada router
+  pulso/schemas.py       validación de entrada (Pydantic) y modelos de respuesta
+  pulso/models.py        modelos ORM (nombres de tablas y columnas originales)
+  pulso/routers/         auth, projects, consumptions, resources, roles
+  pulso/cli.py           init-db, import-sqlite
+  migrations/            Alembic
+frontend/
+  src/api/               cliente tipado (schema.d.ts se genera desde openapi.json)
+  src/views/, components/, stores/, composables/, router.ts
+  e2e/                   pruebas Playwright sobre el stack real
+deploy/                  Caddyfile e imagen web
+compose.yaml             entorno de desarrollo (Postgres, Mailpit, API)
+compose.prod.yaml        stack de producción
 ```
 
-**Terminal 2 — frontend, puerto 8000:**
+## Desarrollo local
 
-```powershell
-.\.venv\Scripts\python.exe frontend/server.py
+Requisitos: [uv](https://docs.astral.sh/uv/), Node 22+ y Docker o Podman con compose. Todo se ejecuta desde `tp-final/`.
+
+```bash
+# 1. Base de datos (Postgres en localhost:5432) y Mailpit (http://localhost:8025)
+docker compose up -d db mailpit          # o: podman compose up -d db mailpit
+
+# 2. API en http://127.0.0.1:5000 (migra y crea admin/Proyecto1 si la base está vacía)
+cd backend
+export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
+uv run python -m pulso.cli init-db
+uv run uvicorn pulso.asgi:app --reload --port 5000
+
+# 3. Frontend en http://127.0.0.1:5173 (el servidor de Vite reenvía /api a la API)
+cd ../frontend
+npm install
+npm run dev
 ```
 
-Abrir **http://127.0.0.1:8000**. El puerto 5000 expone únicamente la API. En una instalación nueva el acceso es **admin / Proyecto1**, con cambio obligatorio de contraseña. Si ya tenías usuarios, contraseñas o proyectos, seguí utilizando los existentes: esta separación no cambia el esquema ni borra datos.
+La API también puede correr en un contenedor: `SECRET_KEY=... docker compose up -d api`. En una instalación nueva el acceso es **admin / Proyecto1** y el sistema obliga a cambiar la contraseña en el primer ingreso. `init-db` es idempotente: aplica las migraciones pendientes y nunca borra datos ni restablece contraseñas.
 
-El servidor del frontend sirve archivos estáticos y reenvía `/api/*` al backend. Así el navegador usa un solo origen para la interfaz, cookies y CSRF. No hay acceso a SQLite ni reglas de negocio en ese servidor. En un futuro despliegue se puede sustituir por un servidor estático con proxy inverso; no hace falta reescribir el frontend. Ejecutar los servidores de desarrollo solo en localhost.
+Cuando cambia la API, hay que regenerar los tipos del frontend con `npm run gen:api`. CI falla si `openapi.json` o `src/api/schema.d.ts` quedaron desactualizados.
 
-Puertos alternativos: `python frontend/server.py --port 8000 --api-port 5000`. Para el backend, usar `flask run --port PUERTO`. No abrir `index.html` mediante `file://`: necesita HTTP y el proxy de API.
+### Migrar los datos de la versión Flask/SQLite
 
-## Configuración y persistencia
+```bash
+cd backend
+uv run python -m pulso.cli import-sqlite ../instance/proyectos.sqlite
+```
 
-`SECRET_KEY` es obligatoria y no se guarda en Git. Conservar su valor entre reinicios mantiene las sesiones; generar uno nuevo obliga a iniciar sesión otra vez. Si se usa HTTPS en otro entorno, configurar `COOKIE_SECURE=1`. Bootstrap se carga desde CDN y requiere conexión para sus estilos completos.
+El comando importa sobre una base vacía: conserva IDs, fechas y hashes y ajusta las secuencias. Si la base destino ya tiene datos, se niega a importar. El archivo SQLite se abre en modo solo lectura.
 
-La base sigue en `instance/proyectos.sqlite`. `init-db` es idempotente: no borra datos ni restablece contraseñas. No se requiere migración para esta versión. Para respaldar, detener el backend y copiar el archivo SQLite. No ejecutar simultáneamente la versión anterior y esta sobre la misma base durante la transición.
+## Despliegue (equipo chico)
+
+```bash
+cp .env.example .env       # completar SECRET_KEY, POSTGRES_PASSWORD y PULSO_DOMAIN
+docker compose -f compose.prod.yaml --env-file .env up -d --build
+```
+
+- `web`: Caddy obtiene el certificado HTTPS de `PULSO_DOMAIN` (los puertos 80 y 443 tienen que ser accesibles). Aplica CSP estricta, HSTS, límite de 1 MB para `/api` y caché inmutable para los assets con hash.
+- `api`: aplica las migraciones al arrancar y usa cookies `Secure`. El número de procesos se ajusta con `API_WORKERS`.
+- `db`: PostgreSQL con volumen persistente.
+- `backup`: espera a que la API haya migrado la base, luego guarda un `pg_dump --clean --if-exists` comprimido por día en `./backups` y conserva `BACKUP_DAYS` días. Si un dump falla, se descarta y se registra `backup FAILED`.
+
+Para restaurar (también sirve sobre una instalación nueva, ya inicializada por `init-db`):
+
+```bash
+docker compose -f compose.prod.yaml stop api
+gunzip -c backups/pulso-AAAA-MM-DD.sql.gz | docker compose -f compose.prod.yaml exec -T db psql -U pulso pulso
+docker compose -f compose.prod.yaml start api
+```
+
+Cambiar `SECRET_KEY` no invalida las sesiones, que viven en la base de datos. Para cerrar todas las sesiones, vaciar la tabla `sesion`.
 
 ## Permisos y reglas
 
@@ -51,43 +112,44 @@ La base sigue en `instance/proyectos.sqlite`. `init-db` es idempotente: no borra
 | Crear/eliminar proyecto o reasignar responsable | No | No | Sí |
 | Gestionar usuarios, contraseñas y roles | No | No | Sí |
 
-Cada recurso es una cuenta; su nombre único es el usuario. Rol es la función en cada consumo. El avance manual de 0 a 100 es independiente del estado y las horas. Se admiten consumos por encima de la estimación o fuera de las fechas previstas. No se eliminan registros con referencias ni al último administrador.
-
-## Arquitectura
-
-```text
-Navegador: frontend/index.html + app.js + api.js + ui.js + styles.css
-    │ fetch('/api/...'), JSON, cookie HttpOnly, X-CSRF-Token
-    ▼
-Servidor estático / proxy local :8000 (frontend/server.py)
-    │ /api/*
-    ▼
-API Flask :5000 (app/)
-    │ consultas parametrizadas, permisos, validación
-    ▼
-SQLite (instance/proyectos.sqlite)
-```
-
-El frontend controla navegación, formularios, mensajes y renderizado con valores escapados. Flask verifica todos los permisos aunque se invoque directamente la API; nunca devuelve hashes de contraseñas. No se almacenan credenciales ni tokens de sesión en localStorage.
-
-Los módulos de Flask separan autenticación, proyectos, consumos, recursos y roles. `db.py` abre una conexión por solicitud con claves foráneas activas. Los totales se calculan en el backend. El contrato está en [docs/API.md](docs/API.md).
+- Cada recurso es una cuenta, y su nombre único (sin distinguir mayúsculas) es el usuario.
+- El rol es la función desempeñada en cada consumo, no un permiso.
+- El avance manual va de 0 a 100 y es independiente del estado y de las horas.
+- Se admiten consumos por encima de la estimación o fuera de las fechas previstas.
+- No se pueden eliminar registros con referencias ni al último administrador. Esta regla está protegida con bloqueos de fila frente a pedidos concurrentes.
+- Al cambiar o restablecer una contraseña se cierran las otras sesiones de esa cuenta.
 
 ## Pruebas
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m pytest -q
-node --test tests/frontend.test.mjs
+```bash
+docker compose up -d db                         # las pruebas del backend crean bases temporales en este Postgres
+cd backend && uv run pytest -q                  # 78 pruebas: contrato, permisos, CSRF, validación, integridad, migraciones
+uv run ruff check . && uv run ruff format --check .
+cd ../frontend && npm test                      # Vitest: cliente HTTP, escape, permisos en tablas, navegación
+npx playwright install chromium && npm run test:e2e   # Playwright: flujos completos sobre API + base e2e aislada
 ```
 
-Node 20+ solo se necesita para ejecutar las pruebas de JavaScript, no para usar la aplicación. Python prueba contrato JSON, login/logout, CSRF, permisos, CRUD, integridad, validaciones, agregados, inicialización, persistencia y el proxy HTTP real. JavaScript prueba escape de entradas, cookies, CSRF y manejo de errores. Las pruebas utilizan bases temporales.
+El workflow de CI `.github/workflows/tp-final.yml` corre todo lo anterior y además construye las imágenes.
 
-## Decisiones y contexto
+## Qué funcionó y qué no
 
-La especificación funcional permanece en [docs/ESPECIFICACION.md](docs/ESPECIFICACION.md), la separación está documentada en [docs/PLAN.md](docs/PLAN.md) y los resultados en [docs/VALIDACION.md](docs/VALIDACION.md). La versión inicial usaba Flask/Jinja; esta versión retira las plantillas y reemplaza formularios POST/redirect por API REST JSON y navegación JavaScript.
+**Funcionó:**
+- La suite Flask se portó completa y actuó como especificación ejecutable: el contrato JSON se mantuvo, y el frontend anterior funcionó sin cambios contra la API nueva antes de reemplazarlo.
+- La importación de la base SQLite real reprodujo exactamente los agregados.
+- El stack de producción se verificó localmente: HTTPS, CSP sin errores en el navegador, cookies `Secure`, 413 y backup.
 
-Se mantiene Flask y SQLite para aprovechar los datos y reglas existentes. El proxy permite separar procesos sin guardar tokens en el navegador ni habilitar CORS amplio. Las contraseñas siguen usando scrypt de Werkzeug y los catálogos públicos para usuarios autenticados incluyen solo IDs y nombres necesarios para seleccionar recursos y roles.
+**Limitaciones y pendientes:**
+- Los booleanos de usuario ahora son `true`/`false` en lugar de `1`/`0`.
+- Un JSON mal formado devuelve 400 antes que el 401 de sesión ausente.
+- La **Fase 5** queda para más adelante: reporting (desvíos y proyecciones), cargas masivas por CSV, Gantt y alertas por correo (worker + SMTP; Mailpit ya está disponible en desarrollo). Ver [docs/PLAN.md](docs/PLAN.md).
 
-## Evidencia Git
+## Documentación y proceso
 
-No se crearon ramas, commits ni PR desde esta sesión: la escritura de metadatos del repositorio padre no fue autorizada anteriormente. La copia externa `tp-final - Flask` no se modifica.
+- [docs/ESPECIFICACION.md](docs/ESPECIFICACION.md): especificación funcional.
+- [docs/API.md](docs/API.md): contrato HTTP.
+- [docs/PLAN.md](docs/PLAN.md): planes y decisiones de arquitectura.
+- [docs/VALIDACION.md](docs/VALIDACION.md): resultados de validación.
+- [HISTORIAL_DESARROLLO.md](HISTORIAL_DESARROLLO.md): historia de las etapas anteriores.
+- [prompts.md](prompts.md): registro textual de cada prompt y cada acción de esta etapa.
+
+**Evidencia Git:** la replataforma se hizo en la rama `replatform-fastapi-vue`, con un commit por fase. La copia `tp-final - Flask/` se conserva sin cambios como referencia histórica.

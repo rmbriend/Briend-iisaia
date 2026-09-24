@@ -1,6 +1,6 @@
 # Especificación funcional
 
-Aplicación local de seguimiento de proyectos, en español, con frontend HTML/JavaScript/CSS y backend API Flask con SQLite; Bootstrap aporta estilos base.
+Aplicación web de seguimiento de proyectos, en español, para un equipo chico. Se despliega en un servidor propio con HTTPS. El frontend usa Vue 3 + TypeScript (estilos propios sobre Bootstrap) y el backend es una API JSON en FastAPI con PostgreSQL.
 
 ## Entidades
 
@@ -19,7 +19,7 @@ El avance real es manual de 0 a 100, independiente del estado y del consumo. Hor
 
 Todos los usuarios autenticados consultan proyectos y consumos; los usuarios comunes crean, editan y eliminan consumos propios. El responsable edita su proyecto salvo la asignación del responsable. El administrador administra todo, incluidos recursos y roles, creación/eliminación de proyectos y reasignaciones. Debe quedar al menos un administrador. Se verifican permisos en el servidor.
 
-La inicialización de una base vacía crea admin / Proyecto1 y exige cambiar esa contraseña. Nuevos usuarios y contraseñas restablecidas también requieren cambio. La inicialización no sobrescribe cuentas. Contraseñas con hash scrypt de Werkzeug, mínimo 8 caracteres para nuevas contraseñas. Todas las mutaciones requieren JSON y CSRF: POST para altas, PUT para actualizaciones y DELETE para bajas. Sin recuperación por correo ni despliegue público.
+La inicialización de una base vacía crea admin / Proyecto1 y exige cambiar esa contraseña. Nuevos usuarios y contraseñas restablecidas también requieren cambio. La inicialización no sobrescribe cuentas. Contraseñas con hash argon2id y mínimo de 8 caracteres para las nuevas. Los hashes scrypt de la versión anterior se aceptan y se actualizan en el siguiente ingreso. Cambiar o restablecer una contraseña cierra las otras sesiones de la cuenta. Todas las mutaciones requieren JSON y CSRF: POST para altas, PUT para actualizaciones y DELETE para bajas. Todavía no hay recuperación por correo. El envío de alertas por correo está previsto para una etapa posterior (Fase 5).
 
 ## Interfaz y aceptación
 
@@ -27,4 +27,15 @@ Tablero con filtros de estado/responsable, tarjetas, horas y avance real; detall
 
 ## Separación tecnológica
 
-El frontend estático consume exclusivamente la API JSON mediante fetch. La API verifica autenticación, permisos y validaciones. Se preserva el esquema y la base existente. Consultar docs/API.md para el contrato HTTP. No se utilizan plantillas Jinja.
+El frontend compilado consume exclusivamente la API JSON, mediante un cliente tipado que se genera desde el esquema OpenAPI. La API verifica autenticación, permisos y validaciones. Las sesiones se guardan en la base de datos, y los cambios de esquema se aplican con migraciones Alembic. Se conservan los nombres de tablas y columnas originales, y los datos de la versión SQLite se importan con `python -m pulso.cli import-sqlite`. El contrato HTTP está en docs/API.md. No se utilizan plantillas Jinja.
+
+## Despliegue
+
+Caddy sirve el frontend, obtiene el certificado HTTPS y reenvía `/api` a la API. PostgreSQL persiste los datos, con un backup diario. Todo se levanta con Docker Compose (`compose.prod.yaml`). Los secretos (`SECRET_KEY` y la contraseña de la base) se leen de variables de entorno y no se guardan en Git.
+
+## Próximas funcionalidades (Fase 5, pendiente)
+
+- Reporting: horas por período, plan vs. ejecución, desvíos y proyecciones de fin y de horas totales.
+- Cargas masivas por CSV, con vista previa de errores por fila.
+- Planificación Gantt: tareas, dependencias y vínculo opcional de consumos con tareas.
+- Alertas por correo: presupuesto excedido, proyecto vencido y días sin carga de horas.

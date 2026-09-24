@@ -1,0 +1,86 @@
+# Production stack for a small team: `podman compose -f compose.prod.yaml --env-file .env up -d --build`
+# (or `docker compose ...`). Copy .env.example to .env first and fill in the secrets.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    environment:
+      PULSO_DOMAIN: ${PULSO_DOMAIN:-localhost}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    command: >
+      sh -c "python -m pulso.cli init-db &&
+             uvicorn pulso.asgi:app --host 0.0.0.0 --port 5000 --workers ${API_WORKERS:-2}
+             --proxy-headers --forwarded-allow-ips='*'"
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Definí SECRET_KEY en .env}
+      DATABASE_URL: postgresql+psycopg://pulso:${POSTGRES_PASSWORD:?Definí POSTGRES_PASSWORD en .env}@db:5432/pulso
+      COOKIE_SECURE: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: pulso
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: pulso
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulso -d pulso"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backup:
+    # Nightly compressed dump into ./backups, keeping the last BACKUP_DAYS days.
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      PGHOST: db
+      PGUSER: pulso
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_DAYS: ${BACKUP_DAYS:-14}
+    volumes:
+      - ./backups:/backups:Z
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -o pipefail
+        # Wait for the api's migrations, so the first dump is never an empty schema.
+        until psql -tAc "SELECT 1 FROM alembic_version" pulso 2>/dev/null | grep -q 1; do sleep 5; done
+        while true; do
+          file=/backups/pulso-$$(date +%F).sql.gz
+          # --clean --if-exists: the dump can be restored over a database initialized by init-db.
+          if pg_dump --clean --if-exists pulso | gzip > $$file.tmp; then
+            mv $$file.tmp $$file && echo "backup ok $$file"
+          else
+            rm -f $$file.tmp && echo "backup FAILED $$(date)" >&2
+          fi
+          find /backups -name 'pulso-*.sql.gz' -mtime +$$BACKUP_DAYS -delete
+          sleep 86400
+        done
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
