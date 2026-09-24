@@ -181,3 +181,18 @@ Se preguntó al usuario cómo manejar la evidencia de Git que pide el curso (ram
 4. CI suma el job `images`, que construye las imágenes de la API y la web después de backend y frontend.
 5. La suite del backend sigue en **78 passed** sin el paquete Flask.
 6. Aparte: se detectó que `FEATURE_PLAN.md` (en la raíz del repo) tiene cambios del usuario, con estados de avance. No se incluyeron en los commits del asistente.
+
+#### Fase 6 — Documentación
+
+1. `README.md` reescrito: stack, diagrama y mapa de carpetas; desarrollo local (compose + uv + Vite); importación desde SQLite; despliegue con `compose.prod.yaml` (incluida la restauración de backups); matriz de permisos; pruebas; qué funcionó y qué no; enlaces a la documentación y evidencia Git.
+2. `docs/API.md`:
+   - proxy Caddy/Vite, OpenAPI en `/api/docs`, sesiones en el servidor con su duración, y cierre de las demás sesiones al cambiar la contraseña;
+   - booleanos JSON, `/api/health`, `responsable` no numérico → 400, ID de ruta no numérico → 404, 500 siempre como JSON, y nota sobre los 502 del proxy;
+   - el orden de las verificaciones (por qué 403 gana sobre 400).
+   - Autocorrección: primero se había escrito que un 502 se informa como error de conexión, pero el cliente muestra el mensaje genérico. Se corrigió el texto.
+3. `docs/ESPECIFICACION.md`: aplicación web hosteada, argon2 con migración de hashes, secciones nuevas de Despliegue y "Próximas funcionalidades (Fase 5, pendiente)".
+4. `docs/PLAN.md`: se agregó el plan de replataforma (motivo, tabla de decisiones, fases con su estado y compatibilidad). El plan anterior se conserva como historia.
+5. `docs/VALIDACION.md`: resultados nuevos (78 + 9 + 5 pruebas, migración de datos, stack de producción y revisión visual). La validación anterior queda en una sección histórica.
+6. `HISTORIAL_DESARROLLO.md` y `docs/HISTORIAL_DESARROLLO.md` (hay dos copias idénticas): sección 19, que resume esta etapa y remite a `prompts.md`.
+7. `CLAUDE.md` en la raíz del repo, ignorado por Git y por lo tanto solo local: se reescribieron la arquitectura, la ejecución y las pruebas de tp-final para el stack nuevo.
+8. **Estado final:** Fases 1, 2, 3, 4 y 6 completas. La Fase 5 (reporting, CSV, Gantt y alertas) queda pendiente, según lo pedido en el Prompt 3.
