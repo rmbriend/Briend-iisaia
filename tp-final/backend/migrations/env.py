@@ -15,7 +15,7 @@ target_metadata = Base.metadata
 
 
 def database_url() -> str:
-    # Tests pass an explicit URL; otherwise DATABASE_URL (migrations don't need SECRET_KEY).
+    # Tests pass an explicit URL; otherwise DATABASE_URL.
     return (
         config.attributes.get('database_url')
         or os.environ.get('DATABASE_URL')

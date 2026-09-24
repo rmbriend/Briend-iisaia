@@ -24,7 +24,6 @@ services:
              uvicorn pulso.asgi:app --host 0.0.0.0 --port 5000 --workers ${API_WORKERS:-2}
              --proxy-headers --forwarded-allow-ips='*'"
     environment:
-      SECRET_KEY: ${SECRET_KEY:?Definí SECRET_KEY en .env}
       DATABASE_URL: postgresql+psycopg://pulso:${POSTGRES_PASSWORD:?Definí POSTGRES_PASSWORD en .env}@db:5432/pulso
       COOKIE_SECURE: "1"
     depends_on:

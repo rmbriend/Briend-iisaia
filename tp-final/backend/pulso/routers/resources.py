@@ -36,6 +36,7 @@ def create(data: RecursoIn, db: DB):
         raise APIError('La contraseña debe tener al menos 8 caracteres.')
     item = Recurso(
         recurso_nombre=data.recurso_nombre,
+        email=data.email,
         es_admin=data.es_admin,
         password=hash_password(data.password),
         debe_cambiar_password=True,
@@ -53,6 +54,7 @@ def update(identifier: int, data: RecursoIn, db: DB):
     if not data.es_admin and is_last_admin(db, item):
         raise APIError('Debe quedar al menos un administrador.', 409, 'last_admin')
     item.recurso_nombre = data.recurso_nombre
+    item.email = data.email
     item.es_admin = data.es_admin
     if data.password:
         # A reset password must be replaced at next login; existing sessions are closed.

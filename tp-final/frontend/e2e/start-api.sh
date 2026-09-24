@@ -5,7 +5,6 @@ set -e
 cd "$(dirname "$0")/../../backend"
 SERVER=${E2E_SERVER_URL:-postgresql+psycopg://pulso:pulso@localhost:5432/pulso}
 export DATABASE_URL="${SERVER%/*}/pulso_e2e"
-export SECRET_KEY=e2e-only-secret-key-0123456789abcdef
 uv run python - "$SERVER" <<'PY'
 import sys
 from sqlalchemy import create_engine, text

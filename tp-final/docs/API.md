@@ -62,3 +62,7 @@ Formato uniforme: `{ "error": { "code": "validation_error", "message": "Mensaje 
 Orden de verificación en cada endpoint protegido: 401 sin sesión → 403 `password_change_required` → 400 `csrf_invalid` → 415 sin JSON → 400 si el cuerpo no es un objeto → 403 por permisos del recurso → 400 por validación de campos. Así, un usuario sin permisos recibe 403 aunque los datos enviados sean inválidos.
 
 Los errores no generan reintentos automáticos de escritura. El frontend conserva el formulario para corregirlo, informa desconexiones y redirige al login o al cambio de contraseña según corresponda.
+
+## Email de recursos
+
+POST y PUT de recursos aceptan `email` opcional (texto o null). Vacío o espacios se normalizan a null; se recortan espacios externos. Un valor inválido devuelve 400 con un mensaje en español. PUT sin email lo deja en null, como reemplazo completo. Los recursos y la sesión incluyen email; los catálogos generales siguen mostrando solo ID y nombre. No hay restricción de unicidad ni verificación de entrega de correo.

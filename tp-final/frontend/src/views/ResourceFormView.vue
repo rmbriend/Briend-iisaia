@@ -14,10 +14,10 @@ const existing = useQuery({
   enabled: () => !!props.id,
   refetchOnWindowFocus: false,
 })
-const form = reactive({ recurso_nombre: '', password: '', es_admin: false })
+const form = reactive({ recurso_nombre: '', email: '', password: '', es_admin: false })
 watch(
   () => existing.data.value,
-  (r) => r && Object.assign(form, { recurso_nombre: r.recurso_nombre, es_admin: r.es_admin }),
+  (r) => r && Object.assign(form, { recurso_nombre: r.recurso_nombre, email: r.email ?? '', es_admin: r.es_admin }),
   { immediate: true },
 )
 
@@ -31,6 +31,10 @@ const { busy, submit } = useSubmit(async () => {
   <LoadState :loading="!!id && existing.isPending.value" :error="existing.error.value" @retry="existing.refetch()">
     <FormShell :title="id ? 'Editar recurso' : 'Nuevo recurso'" back="/recursos" :busy="busy" @submit="submit">
       <TextField v-model="form.recurso_nombre" name="recurso_nombre" label="Nombre de usuario" required autocomplete="off" />
+      <TextField
+        v-model="form.email" name="email" label="Email (opcional)" type="email" autocomplete="email"
+        pattern="[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+" title="Usá el formato nombre@empresa.com"
+      />
       <TextField
         v-model="form.password" name="password" type="password" minlength="8" autocomplete="new-password"
         :label="id ? 'Restablecer contraseña (opcional)' : 'Contraseña inicial'" :required="!id"

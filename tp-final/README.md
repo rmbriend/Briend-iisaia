@@ -56,7 +56,6 @@ docker compose up -d db mailpit          # o: podman compose up -d db mailpit
 
 # 2. API en http://127.0.0.1:5000 (migra y crea admin/Proyecto1 si la base está vacía)
 cd backend
-export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
 uv run python -m pulso.cli init-db
 uv run uvicorn pulso.asgi:app --reload --port 5000
 
@@ -66,7 +65,7 @@ npm install
 npm run dev
 ```
 
-La API también puede correr en un contenedor: `SECRET_KEY=... docker compose up -d api`. En una instalación nueva el acceso es **admin / Proyecto1** y el sistema obliga a cambiar la contraseña en el primer ingreso. `init-db` es idempotente: aplica las migraciones pendientes y nunca borra datos ni restablece contraseñas.
+La API también puede correr en un contenedor: `docker compose up -d api`. En una instalación nueva el acceso es **admin / Proyecto1** y el sistema obliga a cambiar la contraseña en el primer ingreso. `init-db` es idempotente: aplica las migraciones pendientes y nunca borra datos ni restablece contraseñas.
 
 Cuando cambia la API, hay que regenerar los tipos del frontend con `npm run gen:api`. CI falla si `openapi.json` o `src/api/schema.d.ts` quedaron desactualizados.
 
@@ -82,7 +81,7 @@ El comando importa sobre una base vacía: conserva IDs, fechas y hashes y ajusta
 ## Despliegue (equipo chico)
 
 ```bash
-cp .env.example .env       # completar SECRET_KEY, POSTGRES_PASSWORD y PULSO_DOMAIN
+cp .env.example .env       # completar POSTGRES_PASSWORD y PULSO_DOMAIN
 docker compose -f compose.prod.yaml --env-file .env up -d --build
 ```
 
@@ -99,7 +98,7 @@ gunzip -c backups/pulso-AAAA-MM-DD.sql.gz | docker compose -f compose.prod.yaml 
 docker compose -f compose.prod.yaml start api
 ```
 
-Cambiar `SECRET_KEY` no invalida las sesiones, que viven en la base de datos. Para cerrar todas las sesiones, vaciar la tabla `sesion`.
+Las sesiones viven en la base de datos; no requieren una clave de firma. Para cerrar todas las sesiones, vaciar la tabla `sesion`.
 
 ## Permisos y reglas
 
@@ -153,3 +152,7 @@ El workflow de CI `.github/workflows/tp-final.yml` corre todo lo anterior y adem
 - [prompts.md](prompts.md): registro textual de cada prompt y cada acción de esta etapa.
 
 **Evidencia Git:** la replataforma se hizo en la rama `replatform-fastapi-vue`, con un commit por fase. La copia `tp-final - Flask/` se conserva sin cambios como referencia histórica.
+
+## Email de recursos
+
+El formulario de alta y edición permite cargar un email opcional con formato `nombre@empresa.com`. El navegador y la API validan el formato; no se verifica que la casilla exista ni se envían correos. La migración Alembic `0002` agrega la columna nullable y conserva los usuarios existentes sin inventar direcciones. Aplicar con `cd backend` y `uv run alembic upgrade head` (el arranque en Compose también aplica migraciones).

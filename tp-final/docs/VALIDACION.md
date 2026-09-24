@@ -76,3 +76,12 @@ Los datos de prueba no se cargan en la base del usuario. No se cambia el esquema
 ### Historial
 
 La versión inicial Flask/Jinja tuvo 49 pruebas aprobadas; esa suite fue adaptada al contrato JSON, por lo que los conteos no se suman. En esta versión se retiran las plantillas y la navegación por formularios HTML del backend.
+
+## Email de recursos y retiro de clave heredada (2026-09-24)
+
+- Se eliminó la exigencia de SECRET_KEY; las sesiones continúan en PostgreSQL.
+- Migración 0002 aplicada en la base local: agrega email nullable y conserva los campos y contraseñas existentes.
+- 95 pruebas de backend aprobadas. Incluyen email válido/inválido, normalización, alta/edición/lectura y rechazo sin alterar el dato anterior.
+- Frontend: compilación correcta, 9 pruebas previas y 1 nueva prueba del formulario aprobadas.
+- Ruff check y format --check sin observaciones. OpenAPI y tipos del frontend regenerados.
+- La conexión local de pruebas requirió 127.0.0.1 en lugar de localhost. Los E2E completos no se volvieron a ejecutar; su flujo de alta fue actualizado para cargar email.

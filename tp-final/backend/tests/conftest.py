@@ -53,7 +53,7 @@ def migrated(database_url):
 
 @pytest.fixture
 def app(migrated):
-    app = create_app(Settings(secret_key='x' * 32, database_url=migrated))
+    app = create_app(Settings(database_url=migrated))
     yield app
     with app.state.engine.begin() as connection:
         tables = ', '.join(['consumo', 'proyecto', 'rol', 'sesion', 'recurso'])

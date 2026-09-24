@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,7 +8,6 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
-    secret_key: str = Field(min_length=32)
     database_url: str = 'postgresql+psycopg://pulso:pulso@localhost:5432/pulso'
     cookie_secure: bool = False
     session_days: int = 7

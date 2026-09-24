@@ -30,6 +30,7 @@ test('admin creates a user, a role and a project', async ({ page }) => {
   await page.getByRole('link', { name: 'Recursos' }).click()
   await page.getByRole('link', { name: '+ Nuevo recurso' }).click()
   await page.getByLabel('Nombre de usuario').fill('ana')
+  await page.getByLabel('Email (opcional)').fill('ana@example.com')
   await page.getByLabel('Contraseña inicial').fill('Inicial123')
   await page.getByRole('button', { name: 'Guardar' }).click()
   await expect(page.getByRole('cell', { name: 'ana' })).toBeVisible()

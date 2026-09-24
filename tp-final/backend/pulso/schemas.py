@@ -7,6 +7,7 @@ error handler can forward the message verbatim.
 """
 
 import math
+import re
 from datetime import date
 from typing import Annotated, Any
 
@@ -38,6 +39,22 @@ def required_text(value: Any, info: ValidationInfo) -> str:
     value = _string(value, info, strip=True)
     if not value:
         raise fail(REQUIRED)
+    return value
+
+
+def email_address(value: Any) -> str | None:
+    if value is None or value == '':
+        return None
+    if not isinstance(value, str):
+        raise fail('Ingresá un email válido, por ejemplo nombre@empresa.com.')
+    value = value.strip()
+    if not value:
+        return None
+    if not re.fullmatch(
+        r"[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+",
+        value,
+    ):
+        raise fail('Ingresá un email válido, por ejemplo nombre@empresa.com.')
     return value
 
 
@@ -157,6 +174,7 @@ class ConsumoIn(DateRange):
 
 
 class RecursoIn(BaseModel):
+    email: Annotated[str | None, BeforeValidator(email_address)] = None
     recurso_nombre: Text
     es_admin: Flag = False
     password: Password = ''  # on update: empty keeps the current password
@@ -174,6 +192,7 @@ class Out(BaseModel):
 
 
 class UsuarioOut(Out):
+    email: str | None = None
     recurso_id: int
     recurso_nombre: str
     es_admin: bool

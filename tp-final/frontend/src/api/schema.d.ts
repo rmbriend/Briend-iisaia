@@ -466,6 +466,8 @@ export interface components {
         };
         /** RecursoIn */
         RecursoIn: {
+            /** Email */
+            email?: string | null;
             /** Recurso Nombre */
             recurso_nombre: string;
             /**
@@ -506,6 +508,8 @@ export interface components {
         };
         /** UsuarioOut */
         UsuarioOut: {
+            /** Email */
+            email?: string | null;
             /** Recurso Id */
             recurso_id: number;
             /** Recurso Nombre */

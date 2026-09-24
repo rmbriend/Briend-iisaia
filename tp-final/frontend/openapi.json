@@ -8,7 +8,7 @@
     "/api/session": {
       "get": {
         "tags": [
-          "sesi贸n"
+          "sesi髇"
         ],
         "summary": "Current Session",
         "operationId": "current_session_api_session_get",
@@ -29,7 +29,7 @@
     "/api/login": {
       "post": {
         "tags": [
-          "sesi贸n"
+          "sesi髇"
         ],
         "summary": "Login",
         "operationId": "login_api_login_post",
@@ -70,7 +70,7 @@
     "/api/logout": {
       "post": {
         "tags": [
-          "sesi贸n"
+          "sesi髇"
         ],
         "summary": "Logout",
         "operationId": "logout_api_logout_post",
@@ -91,7 +91,7 @@
     "/api/password": {
       "put": {
         "tags": [
-          "sesi贸n"
+          "sesi髇"
         ],
         "summary": "Change Password",
         "operationId": "change_password_api_password_put",
@@ -1432,6 +1432,17 @@
       },
       "RecursoIn": {
         "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "recurso_nombre": {
             "type": "string",
             "title": "Recurso Nombre"
@@ -1528,6 +1539,17 @@
       },
       "UsuarioOut": {
         "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "recurso_id": {
             "type": "integer",
             "title": "Recurso Id"

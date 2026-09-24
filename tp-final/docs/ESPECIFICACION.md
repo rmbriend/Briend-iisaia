@@ -31,7 +31,7 @@ El frontend compilado consume exclusivamente la API JSON, mediante un cliente ti
 
 ## Despliegue
 
-Caddy sirve el frontend, obtiene el certificado HTTPS y reenvía `/api` a la API. PostgreSQL persiste los datos, con un backup diario. Todo se levanta con Docker Compose (`compose.prod.yaml`). Los secretos (`SECRET_KEY` y la contraseña de la base) se leen de variables de entorno y no se guardan en Git.
+Caddy sirve el frontend, obtiene el certificado HTTPS y reenvía `/api` a la API. PostgreSQL persiste los datos, con un backup diario. Todo se levanta con Docker Compose (`compose.prod.yaml`). Los secretos (la contraseña de la base) se leen de variables de entorno y no se guardan en Git.
 
 ## Próximas funcionalidades (Fase 5, pendiente)
 
@@ -39,3 +39,5 @@ Caddy sirve el frontend, obtiene el certificado HTTPS y reenvía `/api` a la API
 - Cargas masivas por CSV, con vista previa de errores por fila.
 - Planificación Gantt: tareas, dependencias y vínculo opcional de consumos con tareas.
 - Alertas por correo: presupuesto excedido, proyecto vencido y días sin carga de horas.
+
+El recurso incluye `email` opcional: si se proporciona, debe tener formato usuario@dominio.extension. Las cuentas existentes conservan email null hasta que se complete.

@@ -30,6 +30,7 @@ class Recurso(Base):
 
     recurso_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     recurso_nombre: Mapped[str] = mapped_column(Text)
+    email: Mapped[str | None] = mapped_column(Text, nullable=True)
     password: Mapped[str] = mapped_column(Text)
     es_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
     debe_cambiar_password: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')

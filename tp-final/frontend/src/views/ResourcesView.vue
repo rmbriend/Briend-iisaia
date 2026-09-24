@@ -15,10 +15,11 @@ const rows = useQuery({ queryKey: ['recursos'], queryFn: api.resources })
   <LoadState :loading="rows.isPending.value" :error="rows.error.value" @retry="rows.refetch()">
     <section class="panel table-responsive">
       <table class="table">
-        <thead><tr><th>Usuario</th><th>Acceso</th><th>Contraseña</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Usuario</th><th>Email</th><th>Acceso</th><th>Contraseña</th><th>Acciones</th></tr></thead>
         <tbody>
           <tr v-for="r in rows.data.value" :key="r.recurso_id">
             <td>{{ r.recurso_nombre }}</td>
+            <td>{{ r.email || '—' }}</td>
             <td>{{ r.es_admin ? 'Administrador' : 'Usuario' }}</td>
             <td>{{ r.debe_cambiar_password ? 'Cambio pendiente' : 'Configurada' }}</td>
             <td>
