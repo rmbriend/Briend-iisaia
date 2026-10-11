@@ -187,7 +187,7 @@ PROYECTOS = (
 def test_proyectos_excel_flavoured_csv_loads_without_edits(client, seeded):
     login(client)
     assert summary(upload(client, 'proyectos', 'p.csv', PROYECTOS, confirmar=True)) == (2, 2, 0, 2, True)
-    assert scalar(seeded, "SELECT horas_requeridas FROM proyecto WHERE proyecto_nombre='Alfa'") == 1200.5
+    assert scalar(seeded, "SELECT horas_requeridas FROM proyecto WHERE proyecto_nombre='Alfa'") == 0
     assert scalar(seeded, "SELECT owner_id FROM proyecto WHERE proyecto_nombre='Beta'") == 3
     assert scalar(seeded, "SELECT porcentaje_avance FROM proyecto WHERE proyecto_nombre='Beta'") == 0
 
@@ -218,7 +218,7 @@ def test_proyectos_row_errors_are_all_reported(client, seeded):
         'X,2026-10-10,2026-10-01,-5,nadie,Cancelado\n'
     )
     body = upload(client, 'proyectos', 'p.csv', content).json()
-    assert {e['campo'] for e in body['errores']} >= {'owner', 'horas_requeridas', 'proyect_status'}
+    assert {e['campo'] for e in body['errores']} >= {'owner', 'proyect_status'}
     assert body['validas'] == 0
 
 
@@ -228,9 +228,9 @@ def test_proyectos_admin_only(client, seeded):
 
 
 TAREAS = (
-    'proyecto,tarea_nombre,fecha_inicio,fecha_fin,porcentaje_avance,recurso\n'
-    'Proyecto ejemplo,Diseño,2026-09-02,2026-09-10,50,bruno\n'
-    'Proyecto ejemplo,Pruebas,2026-09-11,2026-09-20,,\n'
+    'proyecto,tarea_nombre,fecha_inicio,fecha_fin,porcentaje_avance,recurso,horas_requeridas\n'
+    'Proyecto ejemplo,Diseño,2026-09-02,2026-09-10,50,bruno,8\n'
+    'Proyecto ejemplo,Pruebas,2026-09-11,2026-09-20,,,8\n'
 )
 
 
@@ -267,25 +267,25 @@ def test_tareas_dates_outside_project_unknown_and_ambiguous_project(client, seed
         )
     login(client)
     content = (
-        'proyecto,proyecto_id,tarea_nombre,fecha_inicio,fecha_fin,porcentaje_avance\n'
-        'Proyecto ejemplo,,Ambigua,2026-09-02,2026-09-03,0\n'  # two projects with that name
-        ',1,Fuera,2026-10-02,2026-10-03,0\n'  # outside 2026-09-01..30
-        'Inexistente,,Nada,2026-09-02,2026-09-03,0\n'
-        ',1,Bien,2026-09-02,2026-09-03,0\n'  # id fallback
-    )
+        'proyecto,proyecto_id,tarea_nombre,fecha_inicio,fecha_fin,porcentaje_avance,horas_requeridas\n'
+        'Proyecto ejemplo,,Ambigua,2026-09-02,2026-09-03,0,8\n'
+        ',1,Fuera,2026-10-02,2026-10-03,0,8\n'
+        'Inexistente,,Nada,2026-09-02,2026-09-03,0,8\n'
+        ',1,Bien,2026-09-02,2026-09-03,0,8\n'
+    )  # id fallback
     body = upload(client, 'tareas', 't.csv', content).json()
     messages = {e['fila']: e['mensaje'] for e in body['errores']}
     assert 'Hay 2 proyectos' in messages[2]
-    assert 'dentro de las del proyecto' in messages[3]
+    assert 3 not in messages
     assert 'No existe el proyecto' in messages[4]
-    assert 5 not in messages and body['validas'] == 1
+    assert 5 not in messages and body['validas'] == 2
 
 
 def test_tareas_bad_date_order_and_unknown_resource_reported_together(client, seeded):
     login(client)
     content = (
-        'proyecto,tarea_nombre,fecha_inicio,fecha_fin,recurso\n'
-        'Proyecto ejemplo,Mal,2026-09-10,2026-09-02,fantasma\n'
+        'proyecto,tarea_nombre,fecha_inicio,fecha_fin,recurso,horas_requeridas\n'
+        'Proyecto ejemplo,Mal,2026-09-10,2026-09-02,fantasma,8\n'
     )
     body = upload(client, 'tareas', 't.csv', content).json()
     assert body['errores_total'] == 2  # one entry per problem, both on fila 2
@@ -426,10 +426,10 @@ def test_tareas_name_and_id_must_agree_when_both_are_given(client, seeded):
     add_project(seeded, 'Otro')
     login(client)
     content = (
-        'proyecto,proyecto_id,tarea_nombre,fecha_inicio,fecha_fin\n'
-        'Otro,1,Cruzada,2026-09-02,2026-09-03\n'  # name of project 2, id of project 1
-        'Fantasma,1,Inexistente,2026-09-02,2026-09-03\n'
-        'proyecto EJEMPLO,1,Coincide,2026-09-02,2026-09-03\n'
+        'proyecto,proyecto_id,tarea_nombre,fecha_inicio,fecha_fin,horas_requeridas\n'
+        'Otro,1,Cruzada,2026-09-02,2026-09-03,8\n'
+        'Fantasma,1,Inexistente,2026-09-02,2026-09-03,8\n'
+        'proyecto EJEMPLO,1,Coincide,2026-09-02,2026-09-03,8\n'
     )
     body = upload(client, 'tareas', 't.csv', content).json()
     assert [(e['fila'], e['campo']) for e in body['errores']] == [(2, 'proyecto'), (3, 'proyecto')]
@@ -477,11 +477,16 @@ def test_proyectos_warn_about_repeated_names_but_stay_valid(client, seeded):
     )
     body = upload(client, 'proyectos', 'p.csv', content).json()
     assert (body['validas'], body['errores_total']) == (3, 0)
-    assert [(w['fila'], w['campo']) for w in body['advertencias']] == [
+    assert {w['campo'] for w in body['advertencias'] if w['fila'] == 1} == {
+        'fecha_inicio',
+        'fecha_fin',
+        'horas_requeridas',
+    }
+    assert [(w['fila'], w['campo']) for w in body['advertencias'] if w['fila'] != 1] == [
         (2, 'proyecto_nombre'),
         (4, 'proyecto_nombre'),
     ]
-    assert 'ambiguas' in body['advertencias'][0]['mensaje']
+    assert any('ambiguas' in w['mensaje'] for w in body['advertencias'] if w['campo'] == 'proyecto_nombre')
 
 
 def test_tareas_warn_about_repeated_names_in_the_same_project(client, seeded):
@@ -489,12 +494,12 @@ def test_tareas_warn_about_repeated_names_in_the_same_project(client, seeded):
     login(client)
     assert upload(client, 'tareas', 't.csv', TAREAS, confirmar=True).json()['creadas'] == 2
     content = (
-        'proyecto,tarea_nombre,fecha_inicio,fecha_fin\n'
-        'Proyecto ejemplo,diseño,2026-09-02,2026-09-03\n'  # already in the database
-        'Proyecto ejemplo,Otra,2026-09-02,2026-09-03\n'
-        'Proyecto ejemplo,OTRA,2026-09-02,2026-09-03\n'  # repeated inside the file
-        'Otro,Otra,2026-09-02,2026-09-03\n'  # same name, different project: no warning
-    )
+        'proyecto,tarea_nombre,fecha_inicio,fecha_fin,horas_requeridas\n'
+        'Proyecto ejemplo,diseño,2026-09-02,2026-09-03,8\n'
+        'Proyecto ejemplo,Otra,2026-09-02,2026-09-03,8\n'
+        'Proyecto ejemplo,OTRA,2026-09-02,2026-09-03,8\n'
+        'Otro,Otra,2026-09-02,2026-09-03,8\n'
+    )  # same name, different project: no warning
     body = upload(client, 'tareas', 't.csv', content).json()
     assert (body['validas'], body['errores_total']) == (4, 0)
     assert [(w['fila'], w['campo']) for w in body['advertencias']] == [

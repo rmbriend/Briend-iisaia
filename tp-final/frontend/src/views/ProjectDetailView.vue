@@ -42,7 +42,7 @@ const summaries = computed(() => [
       <RouterLink to="/proyectos">← Proyectos</RouterLink>
       <PageHeading
         :title="project.proyecto_nombre"
-        :subtitle="`${project.responsable} · ${project.fecha_inicio} → ${project.fecha_fin} · ${project.proyect_status}`"
+        :subtitle="`${project.responsable} · ${project.fecha_inicio ?? 'Sin planificación'} → ${project.fecha_fin ?? '—'} · ${project.proyect_status}`"
         eyebrow="DETALLE DEL PROYECTO"
       >
         <div class="actions">
@@ -53,7 +53,7 @@ const summaries = computed(() => [
       </PageHeading>
       <StatGrid :items="stats" />
       <TaskPlan :project-id="id" :editable="editable" />
-      <ProjectHoursChart :project="project" :consumptions="detail.data.value?.consumos ?? []" />
+      <ProjectHoursChart :project="project" :consumptions="detail.data.value?.consumos ?? []" :tasks="detail.data.value?.tareas ?? []" />
       <section class="panel">
         <div class="section-heading">
           <h2>Consumos de horas</h2>

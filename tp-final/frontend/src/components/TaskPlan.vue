@@ -21,15 +21,15 @@ const gantt = ref<InstanceType<typeof ProjectGantt>>()
 async function save(id: number, changes: Partial<Task>, message: string) {
   const task = tasks.data.value?.find((t) => t.tarea_id === id)
   if (!task) return
-  const { tarea_nombre, fecha_inicio, fecha_fin, porcentaje_avance, recurso_id } = { ...task, ...changes }
+  const { tarea_nombre, fecha_inicio, fecha_fin, porcentaje_avance, recurso_id, horas_requeridas } = { ...task, ...changes }
   try {
-    await api.updateTask(id, { tarea_nombre, fecha_inicio, fecha_fin, porcentaje_avance, recurso_id })
+    await api.updateTask(id, { tarea_nombre, fecha_inicio, fecha_fin, porcentaje_avance, recurso_id, horas_requeridas })
     showNotice(message, 'success')
   } catch (error) {
     gantt.value?.reset()
     await handleError(error, router)
   }
-  await queryClient.invalidateQueries({ queryKey: ['tareas'] })
+  await queryClient.invalidateQueries()
 }
 
 const move = (id: number, fecha_inicio: string, fecha_fin: string) =>
@@ -58,12 +58,13 @@ function open(id: number) {
       <div v-if="bars.length" class="table-responsive">
         <table class="table">
           <thead>
-            <tr><th>Tarea / responsable</th><th>Período</th><th class="text-end">Avance</th><th>Acciones</th></tr>
+            <tr><th>Tarea / responsable</th><th>Período</th><th class="text-end">Horas requeridas</th><th class="text-end">Avance</th><th>Acciones</th></tr>
           </thead>
           <tbody>
             <tr v-for="t in tasks.data.value" :key="t.tarea_id">
               <td><strong>{{ t.tarea_nombre }}</strong><small class="d-block muted">{{ t.recurso_nombre ?? 'Sin asignar' }}</small></td>
               <td class="date-cell">{{ t.fecha_inicio }}<br />{{ t.fecha_fin }}</td>
+              <td class="text-end">{{ fmt(t.horas_requeridas) }} h</td>
               <td class="text-end">{{ fmt(t.porcentaje_avance) }} %</td>
               <td>
                 <div v-if="editable" class="actions">

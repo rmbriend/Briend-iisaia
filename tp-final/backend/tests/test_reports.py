@@ -165,7 +165,7 @@ def test_endpoint_empty_project(client):
     body = post(
         client,
         '/api/proyectos',
-        project_data() | dict(proyecto_nombre='Vacío', fecha_inicio='2026-10-01', fecha_fin='2026-10-31'),
+        project_data() | dict(proyecto_nombre='Vacío'),
     ).json()
     report = client.get(f'/api/proyectos/{body["proyecto_id"]}/reporte').json()
     assert report['periodos'] == [] and report['ejecucion']['primer_consumo'] is None

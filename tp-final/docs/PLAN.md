@@ -172,3 +172,23 @@ Límites conocidos (de las revisiones):
 
 Revisión final: se endurecieron los límites del parseo (dimensión declarada, 100 columnas, 50 MiB descomprimidos, caracteres nulos), nombre e id deben coincidir, los puntos de miles se interpretan, y se agregaron las advertencias de repetidos y el mensaje del 413. Ver `docs/VALIDACION.md`.
 
+
+## Plan del proyecto calculado desde tareas
+
+Cada tarea requiere horas positivas y fechas ordenadas. El proyecto calcula horas como la suma,
+inicio como la fecha mínima y fin como la fecha máxima de todas sus tareas. No admite editar
+estos campos por formulario ni API. Un proyecto nuevo, o uno cuya última tarea se elimina,
+tiene 0 horas y fechas nulas hasta que se agreguen tareas. Las tareas pueden extender el período.
+El recálculo es transaccional mediante triggers PostgreSQL y bloqueos por proyecto: incluye
+crear, editar, reprogramar en Gantt, eliminar e importar tareas en carga masiva.
+La plantilla de proyectos ya no requiere fechas ni horas; la de tareas requiere horas_requeridas.
+
+La migración 0006 asigna a las tareas existentes las horas anteriores del proyecto en proporción
+a sus días calendario (ambas fechas incluidas). Para los proyectos sin tareas crea una tarea
+«Planificación inicial (migrada)» que conserva el plan anterior. Revisar esta distribución estimada
+y corregir las horas de cada tarea si corresponde. El avance manual del proyecto no se altera.
+
+El gráfico azul acumula cada día la suma de horas diarias de las tareas activas: horas de la tarea
+/ días inclusivos. Suma tareas superpuestas y mantiene plano el acumulado en los días sin tareas.
+La última fecha alcanza la suma de estimaciones. Las horas aplicadas y la regresión conservan
+su lógica; el gráfico del detalle y el del dashboard comparten el mismo plan.

@@ -1,0 +1,1 @@
+New-NetFirewallRule -DisplayName "Pulso frontend 5173" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5173 -Profile Private -RemoteAddress LocalSubnet

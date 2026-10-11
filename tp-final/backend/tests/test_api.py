@@ -160,14 +160,14 @@ def test_project_validation(client, seeded, name, value):
 def test_validation_messages_are_spanish(client):
     login(client)
     data = project_data()
-    del data['horas_requeridas']
+    del data['proyecto_nombre']
     assert mutate(client, 'PUT', '/api/proyectos/1', data).json()['error']['message'] == (
-        'Ingresá valores numéricos válidos.'
+        'Completá todos los campos obligatorios.'
     )
     data = project_data()
     data['fecha_fin'] = '2026-08-01'
     assert mutate(client, 'PUT', '/api/proyectos/1', data).json()['error']['message'] == (
-        'La fecha de fin no puede ser anterior al inicio.'
+        'Las fechas y las horas del proyecto se calculan desde sus tareas y no son editables.'
     )
 
 

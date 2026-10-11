@@ -261,16 +261,42 @@ el botón queda deshabilitado. Las alertas de horas siguen ejecutándose al guar
 
 El detalle del proyecto muestra debajo de Planificación dos líneas: azul para horas
 planificadas y naranja discontinua para aplicadas. Cada punto representa el cierre del día.
-El plan reparte las horas requeridas entre todos los días calendario del proyecto, ambas
-fechas incluidas. Cada consumo se reparte uniformemente entre sus propias fechas (el modelo
+El plan reparte las horas de cada tarea entre sus días calendario, ambas fechas incluidas,
+y suma las tareas que coinciden en cada día. Cada consumo se reparte uniformemente entre sus propias fechas (el modelo
 no guarda un desglose diario). Se suman consumos superpuestos. El gráfico empieza el primer
 día del proyecto e incluye allí cualquier saldo anterior; se extiende si hay consumos posteriores.
 El plan permanece constante después de su fecha final. El eje Y va de cero a las horas requeridas;
 los excesos se informan en texto y el selector permite consultar valores fuera de la escala.
 
-La línea aplicada termina en la última fecha de fin de los consumos. A partir de allí,
+La línea aplicada llega hasta el último consumo y se mantiene horizontal hasta la fecha del reporte. Desde esa fecha,
 una línea verde proyecta hasta el fin previsto usando la pendiente de mínimos cuadrados
 sobre los acumulados diarios observados desde el inicio del proyecto (incluidos días sin
 cargas), anclada al último acumulado real para dar continuidad. No usa días futuros en el
 ajuste ni altera consumos. Con menos de dos días observados no se calcula una regresión.
 El selector distingue horas aplicadas de proyectadas y avisa si la proyección supera la escala.
+
+## Plan del proyecto calculado desde tareas
+
+Cada tarea requiere horas positivas y fechas ordenadas. El proyecto calcula horas como la suma,
+inicio como la fecha mínima y fin como la fecha máxima de todas sus tareas. No admite editar
+estos campos por formulario ni API. Un proyecto nuevo, o uno cuya última tarea se elimina,
+tiene 0 horas y fechas nulas hasta que se agreguen tareas. Las tareas pueden extender el período.
+El recálculo es transaccional mediante triggers PostgreSQL y bloqueos por proyecto: incluye
+crear, editar, reprogramar en Gantt, eliminar e importar tareas en carga masiva.
+La plantilla de proyectos ya no requiere fechas ni horas; la de tareas requiere horas_requeridas.
+
+La migración 0006 asigna a las tareas existentes las horas anteriores del proyecto en proporción
+a sus días calendario (ambas fechas incluidas). Para los proyectos sin tareas crea una tarea
+«Planificación inicial (migrada)» que conserva el plan anterior. Revisar esta distribución estimada
+y corregir las horas de cada tarea si corresponde. El avance manual del proyecto no se altera.
+
+El gráfico azul acumula cada día la suma de horas diarias de las tareas activas: horas de la tarea
+/ días inclusivos. Suma tareas superpuestas y mantiene plano el acumulado en los días sin tareas.
+La última fecha alcanza la suma de estimaciones. Las horas aplicadas y la regresión conservan
+su lógica; el gráfico del detalle y el del dashboard comparten el mismo plan.
+
+La proyección empieza en la fecha del reporte (hoy en Buenos Aires en el detalle; fecha_corte
+del dashboard). Desde el último día con horas hasta esa fecha, el acumulado aplicado se
+mantiene horizontal. La pendiente se ajusta solo sobre el historial hasta la última carga,
+sin incluir el tramo de espera. La fecha proyectada de agotar horas usa el mismo inicio.
+Si la fecha del reporte es igual o posterior al fin previsto, no se dibuja proyección futura.

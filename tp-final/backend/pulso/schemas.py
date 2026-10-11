@@ -162,9 +162,16 @@ class PasswordIn(BaseModel):
     confirmacion: Password
 
 
-class ProyectoIn(DateRange):
+class ProyectoIn(BaseModel):
     proyecto_nombre: Text
-    horas_requeridas: Hours
+
+    @model_validator(mode='before')
+    @classmethod
+    def derived_fields(cls, values):
+        if isinstance(values, dict) and {'fecha_inicio', 'fecha_fin', 'horas_requeridas'} & values.keys():
+            raise fail('Las fechas y las horas del proyecto se calculan desde sus tareas y no son editables.')
+        return values
+
     owner_id: Id | None = None  # required for admins; ignored for project owners
     proyect_status: Status
     porcentaje_avance: Percentage
@@ -191,6 +198,7 @@ class ConsumoIn(DateRange):
 
 class TareaIn(DateRange):
     tarea_nombre: Text
+    horas_requeridas: Hours
     porcentaje_avance: Percentage
     recurso_id: OptionalId = None  # optional assignee
 
@@ -245,8 +253,8 @@ class Catalogos(BaseModel):
 class ProyectoOut(Out):
     proyecto_id: int
     proyecto_nombre: str
-    fecha_inicio: date
-    fecha_fin: date
+    fecha_inicio: date | None
+    fecha_fin: date | None
     horas_requeridas: float
     owner_id: int
     proyect_status: str
@@ -279,6 +287,7 @@ class ConsumoListado(ConsumoOut):
 
 
 class TareaOut(Out):
+    horas_requeridas: float
     tarea_id: int
     proyecto_id: int
     tarea_nombre: str
@@ -290,6 +299,7 @@ class TareaOut(Out):
 
 
 class ProyectoDetalle(BaseModel):
+    tareas: list[TareaOut]
     proyecto: ProyectoResumen
     consumos: list[ConsumoListado]
     por_recurso: dict[str, float]

@@ -2,14 +2,13 @@
 import { useQuery } from '@tanstack/vue-query'
 import { computed, reactive, watch } from 'vue'
 import { api, APIError } from '@/api/client'
-import DateField from '@/components/DateField.vue'
 import FormShell from '@/components/FormShell.vue'
 import LoadState from '@/components/LoadState.vue'
 import SelectField from '@/components/SelectField.vue'
 import TextField from '@/components/TextField.vue'
 import { useSubmit } from '@/composables/submit'
 import { useSessionStore } from '@/stores/session'
-import { dateRangeError, toNumber, toText } from '@/utils'
+import { fmt, toNumber, toText } from '@/utils'
 
 const props = defineProps<{ id?: number }>()
 const session = useSessionStore()
@@ -22,7 +21,7 @@ const existing = useQuery({
 })
 
 const form = reactive({
-  proyecto_nombre: '', fecha_inicio: '', fecha_fin: '', horas_requeridas: '' as string | number,
+  proyecto_nombre: '',
   porcentaje_avance: '0' as string | number, owner_id: '', proyect_status: 'Pendiente',
 })
 watch(
@@ -30,16 +29,13 @@ watch(
   (p) => {
     if (!p) return
     Object.assign(form, {
-      proyecto_nombre: p.proyecto_nombre, fecha_inicio: p.fecha_inicio, fecha_fin: p.fecha_fin,
-      horas_requeridas: p.horas_requeridas, porcentaje_avance: p.porcentaje_avance,
+      proyecto_nombre: p.proyecto_nombre, porcentaje_avance: p.porcentaje_avance,
       owner_id: toText(p.owner_id), proyect_status: p.proyect_status,
     })
   },
   { immediate: true },
 )
 
-const dateReady = computed(() => !!form.fecha_inicio && !!form.fecha_fin)
-const dateError = computed(() => (dateReady.value ? dateRangeError(form.fecha_inicio, form.fecha_fin) : null))
 
 const denied = computed(() => {
   const user = session.user
@@ -52,7 +48,6 @@ const { busy, submit } = useSubmit(async () => {
   const saved = await api.saveProject(
     {
       ...form,
-      horas_requeridas: toNumber(form.horas_requeridas),
       porcentaje_avance: toNumber(form.porcentaje_avance),
       owner_id: session.user?.es_admin ? toNumber(form.owner_id) : undefined,
     },
@@ -70,16 +65,20 @@ const { busy, submit } = useSubmit(async () => {
   >
     <FormShell
       :title="id ? 'Editar proyecto' : 'Nuevo proyecto'" back="/proyectos" :busy="busy"
-      :disabled="!dateReady || !!dateError" @submit="submit"
+      @submit="submit"
     >
       <TextField v-model="form.proyecto_nombre" name="proyecto_nombre" label="Nombre del proyecto" required />
       <div class="form-grid">
-        <DateField v-model="form.fecha_inicio" name="fecha_inicio" label="Fecha de inicio" required />
-        <DateField v-model="form.fecha_fin" name="fecha_fin" label="Fecha de fin prevista" required />
-        <TextField v-model="form.horas_requeridas" name="horas_requeridas" label="Horas requeridas" type="number" required min="0" step="any" />
         <TextField v-model="form.porcentaje_avance" name="porcentaje_avance" label="Avance real (%)" type="number" required min="0" max="100" step="any" />
       </div>
-      <p v-if="dateError" class="field-error">{{ dateError }}</p>
+      <div class="panel muted">
+        <p>Las fechas y las horas requeridas se calculan automáticamente desde las tareas.</p>
+        <p v-if="existing.data.value?.proyecto.fecha_inicio">
+          Inicio: {{ existing.data.value.proyecto.fecha_inicio }} · Fin: {{ existing.data.value.proyecto.fecha_fin }} ·
+          Horas requeridas: {{ fmt(existing.data.value.proyecto.horas_requeridas) }} h
+        </p>
+        <p v-else>Sin planificación. Guardá el proyecto y agregá su primera tarea.</p>
+      </div>
       <SelectField
         v-if="session.user?.es_admin" v-model="form.owner_id" name="owner_id" label="Responsable"
         :options="(catalogs.data.value?.recursos ?? []).map((r) => ({ value: r.recurso_id, label: r.recurso_nombre }))"

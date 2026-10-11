@@ -1755,6 +1755,13 @@
       },
       "ProyectoDetalle": {
         "properties": {
+          "tareas": {
+            "items": {
+              "$ref": "#/components/schemas/TareaOut"
+            },
+            "type": "array",
+            "title": "Tareas"
+          },
           "proyecto": {
             "$ref": "#/components/schemas/ProyectoResumen"
           },
@@ -1782,6 +1789,7 @@
         },
         "type": "object",
         "required": [
+          "tareas",
           "proyecto",
           "consumos",
           "por_recurso",
@@ -1791,23 +1799,9 @@
       },
       "ProyectoIn": {
         "properties": {
-          "fecha_inicio": {
-            "type": "string",
-            "format": "date",
-            "title": "Fecha Inicio"
-          },
-          "fecha_fin": {
-            "type": "string",
-            "format": "date",
-            "title": "Fecha Fin"
-          },
           "proyecto_nombre": {
             "type": "string",
             "title": "Proyecto Nombre"
-          },
-          "horas_requeridas": {
-            "type": "number",
-            "title": "Horas Requeridas"
           },
           "owner_id": {
             "anyOf": [
@@ -1831,10 +1825,7 @@
         },
         "type": "object",
         "required": [
-          "fecha_inicio",
-          "fecha_fin",
           "proyecto_nombre",
-          "horas_requeridas",
           "proyect_status",
           "porcentaje_avance"
         ],
@@ -1851,13 +1842,27 @@
             "title": "Proyecto Nombre"
           },
           "fecha_inicio": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Fecha Inicio"
           },
           "fecha_fin": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Fecha Fin"
           },
           "horas_requeridas": {
@@ -1956,13 +1961,27 @@
             "title": "Proyecto Nombre"
           },
           "fecha_inicio": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Fecha Inicio"
           },
           "fecha_fin": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Fecha Fin"
           },
           "horas_requeridas": {
@@ -2480,6 +2499,10 @@
             "type": "string",
             "title": "Tarea Nombre"
           },
+          "horas_requeridas": {
+            "type": "number",
+            "title": "Horas Requeridas"
+          },
           "porcentaje_avance": {
             "type": "number",
             "title": "Porcentaje Avance"
@@ -2501,12 +2524,17 @@
           "fecha_inicio",
           "fecha_fin",
           "tarea_nombre",
+          "horas_requeridas",
           "porcentaje_avance"
         ],
         "title": "TareaIn"
       },
       "TareaOut": {
         "properties": {
+          "horas_requeridas": {
+            "type": "number",
+            "title": "Horas Requeridas"
+          },
           "tarea_id": {
             "type": "integer",
             "title": "Tarea Id"
@@ -2558,6 +2586,7 @@
         },
         "type": "object",
         "required": [
+          "horas_requeridas",
           "tarea_id",
           "proyecto_id",
           "tarea_nombre",

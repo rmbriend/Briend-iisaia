@@ -16,12 +16,12 @@ const ENTITIES: BulkEntity[] = [
     key: 'proyectos',
     label: 'Proyectos',
     columns:
-      'proyecto_nombre, fecha_inicio, fecha_fin, horas_requeridas, owner (nombre del recurso), proyect_status, porcentaje_avance',
+      'proyecto_nombre, owner (nombre del recurso), proyect_status, porcentaje_avance',
   },
   {
     key: 'tareas',
     label: 'Tareas',
-    columns: 'proyecto (o proyecto_id), tarea_nombre, fecha_inicio, fecha_fin, porcentaje_avance, recurso',
+    columns: 'proyecto (o proyecto_id), tarea_nombre, fecha_inicio, fecha_fin, horas_requeridas, porcentaje_avance, recurso',
   },
   {
     key: 'consumos',

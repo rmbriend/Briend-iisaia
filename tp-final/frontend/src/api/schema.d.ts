@@ -540,6 +540,8 @@ export interface components {
         };
         /** ProyectoDetalle */
         ProyectoDetalle: {
+            /** Tareas */
+            tareas: components["schemas"]["TareaOut"][];
             proyecto: components["schemas"]["ProyectoResumen"];
             /** Consumos */
             consumos: components["schemas"]["ConsumoListado"][];
@@ -554,20 +556,8 @@ export interface components {
         };
         /** ProyectoIn */
         ProyectoIn: {
-            /**
-             * Fecha Inicio
-             * Format: date
-             */
-            fecha_inicio: string;
-            /**
-             * Fecha Fin
-             * Format: date
-             */
-            fecha_fin: string;
             /** Proyecto Nombre */
             proyecto_nombre: string;
-            /** Horas Requeridas */
-            horas_requeridas: number;
             /** Owner Id */
             owner_id?: number | null;
             /** Proyect Status */
@@ -581,16 +571,10 @@ export interface components {
             proyecto_id: number;
             /** Proyecto Nombre */
             proyecto_nombre: string;
-            /**
-             * Fecha Inicio
-             * Format: date
-             */
-            fecha_inicio: string;
-            /**
-             * Fecha Fin
-             * Format: date
-             */
-            fecha_fin: string;
+            /** Fecha Inicio */
+            fecha_inicio: string | null;
+            /** Fecha Fin */
+            fecha_fin: string | null;
             /** Horas Requeridas */
             horas_requeridas: number;
             /** Owner Id */
@@ -627,16 +611,10 @@ export interface components {
             proyecto_id: number;
             /** Proyecto Nombre */
             proyecto_nombre: string;
-            /**
-             * Fecha Inicio
-             * Format: date
-             */
-            fecha_inicio: string;
-            /**
-             * Fecha Fin
-             * Format: date
-             */
-            fecha_fin: string;
+            /** Fecha Inicio */
+            fecha_inicio: string | null;
+            /** Fecha Fin */
+            fecha_fin: string | null;
             /** Horas Requeridas */
             horas_requeridas: number;
             /** Owner Id */
@@ -819,6 +797,8 @@ export interface components {
             fecha_fin: string;
             /** Tarea Nombre */
             tarea_nombre: string;
+            /** Horas Requeridas */
+            horas_requeridas: number;
             /** Porcentaje Avance */
             porcentaje_avance: number;
             /** Recurso Id */
@@ -826,6 +806,8 @@ export interface components {
         };
         /** TareaOut */
         TareaOut: {
+            /** Horas Requeridas */
+            horas_requeridas: number;
             /** Tarea Id */
             tarea_id: number;
             /** Proyecto Id */

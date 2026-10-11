@@ -36,13 +36,15 @@ def index_state(value: float | None) -> str | None:
 
 
 def elapsed_days(project: dict, today: date) -> tuple[int, int]:
+    if not project['fecha_inicio'] or not project['fecha_fin']:
+        return 0, 0
     duration = (project['fecha_fin'] - project['fecha_inicio']).days + 1
     return int(_clamp((today - project['fecha_inicio']).days + 1, 0, duration)), duration
 
 
 def health(project: dict, today: date) -> dict:
     elapsed, duration = elapsed_days(project, today)
-    time_pct = elapsed / duration * 100
+    time_pct = elapsed / duration * 100 if duration else 0
     earned = project['porcentaje_avance'] / 100 * project['horas_requeridas']
     consumed = project['horas_consumidas']
     efficiency = earned / consumed if consumed > 0 else None
@@ -112,7 +114,7 @@ def pace(project: dict, consumptions: list[dict], today: date) -> dict:
                     recent += hours
     first = min((c['fecha_inicio'] for c in consumptions), default=None)
     average = to_date / (max((today - first).days + 1, 7) / 7) if first and first <= today else 0.0
-    remaining = (project['fecha_fin'] - today).days
+    remaining = (project['fecha_fin'] - today).days if project['fecha_fin'] else 0
     needed = None
     if remaining > 0 and project['saldo'] > 0:
         needed = project['saldo'] / (remaining / 7)
@@ -129,15 +131,17 @@ def execution(project: dict, consumptions: list[dict], today: date) -> dict:
     active: set[date] = set()
     for consumption in consumptions:
         for day, hours in daily_hours(consumption):
-            before += hours if day < project['fecha_inicio'] else 0
-            after += hours if day > project['fecha_fin'] else 0
+            before += hours if project['fecha_inicio'] and day < project['fecha_inicio'] else 0
+            after += hours if project['fecha_fin'] and day > project['fecha_fin'] else 0
             if day <= today:
                 active.add(day)
     first = min((c['fecha_inicio'] for c in consumptions), default=None)
     return {
         'primer_consumo': first,
         'ultimo_consumo': max((c['fecha_fin'] for c in consumptions), default=None),
-        'dias_desvio_inicio': (first - project['fecha_inicio']).days if first else None,
+        'dias_desvio_inicio': (first - project['fecha_inicio']).days
+        if first and project['fecha_inicio']
+        else None,
         'horas_antes_inicio': before,
         'horas_despues_fin': after,
         'dias_con_actividad': len(active),

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, useId, watch } from 'vue'
-import { projectHours, projectForecast, forecastStatus as forecastStatusOf, type HoursConsumption, type HoursProject } from '@/projectHours'
+import { projectHours, projectForecast, reportToday, forecastStatus as forecastStatusOf, type HoursConsumption, type HoursProject, type HoursTask } from '@/projectHours'
 import { fmt } from '@/utils'
 
-const props = defineProps<{ project: HoursProject; consumptions: HoursConsumption[] }>()
-const points = computed(() => projectHours(props.project, props.consumptions))
-const forecast = computed(() => projectForecast(points.value, props.consumptions, props.project.fecha_fin))
+const props = defineProps<{ project: HoursProject; consumptions: HoursConsumption[]; tasks: HoursTask[]; reportDate?: string }>()
+const reportDate = computed(() => props.reportDate ?? reportToday())
+const points = computed(() => projectHours(props.project, props.consumptions, props.tasks, reportDate.value))
+const forecast = computed(() => projectForecast(points.value, props.consumptions, props.project.fecha_fin, reportDate.value))
 const lastActualIndex = computed(() => points.value.reduce((last, point, index) => point.date <= forecast.value.lastDate ? index : last, -1))
 const lastActual = computed(() => points.value[lastActualIndex.value])
 const hasForecast = computed(() => forecast.value.values.some(value => value !== null))
@@ -13,18 +14,18 @@ const finalForecast = computed(() => forecast.value.values[points.value.findInde
 const forecastStatus = computed(() => forecastStatusOf(finalForecast.value, props.project.horas_requeridas))
 const forecastColor = computed(() => forecastStatus.value?.acceptable === false ? '#b91c1c' : '#15803d')
 const projected = computed(() => forecast.value.values[selected.value] ?? null)
-const isActual = computed(() => !!current.value && current.value.date <= forecast.value.lastDate)
+const isActual = computed(() => !!current.value && !!forecast.value.lastDate && current.value.date <= forecast.value.startDate)
 const selected = ref(0)
 watch(points, (rows) => { selected.value = Math.max(0, rows.length - 1) }, { immediate: true })
 const current = computed(() => points.value[selected.value])
 const clipId = useId()
 const left = 68, right = 856, top = 24, bottom = 125
 const x = (index: number) => points.value.length === 1 ? (left + right) / 2 : left + index * (right - left) / (points.value.length - 1)
-const y = (hours: number) => bottom - hours / props.project.horas_requeridas * (bottom - top)
+const y = (hours: number) => bottom - hours / (props.project.horas_requeridas || 1) * (bottom - top)
 function path(key: 'planned' | 'actual' | 'forecast') {
   let started = false
   return points.value.map((point, index) => {
-    const value = key === 'forecast' ? forecast.value.values[index] : key === 'actual' && point.date > forecast.value.lastDate ? null : point[key]
+    const value = key === 'forecast' ? forecast.value.values[index] : key === 'actual' && (!forecast.value.lastDate || point.date > forecast.value.startDate) ? null : point[key]
     if (value === null || value === undefined) return ''
     const command = started ? 'L' : 'M'
     started = true
@@ -36,7 +37,7 @@ const ticks = computed(() => [...new Set(Array.from({ length: Math.min(6, points
 const label = (value: string) => value.split('-').reverse().join('/')
 const total = computed(() => props.consumptions.reduce((sum, row) => sum + row.horas_consumidas, 0))
 const excess = computed(() => Math.max(0, total.value - props.project.horas_requeridas))
-const beforeStart = computed(() => props.consumptions.some(row => row.fecha_inicio < props.project.fecha_inicio))
+const beforeStart = computed(() => props.consumptions.some(row => props.project.fecha_inicio !== null && row.fecha_inicio < props.project.fecha_inicio))
 function inspect(event: MouseEvent) {
   const bounds = (event.currentTarget as SVGElement).getBoundingClientRect()
   const position = (event.clientX - bounds.left) / bounds.width * 900
@@ -47,7 +48,9 @@ function inspect(event: MouseEvent) {
 <template>
   <section class="panel hours-chart">
     <h2>Horas acumuladas</h2>
-    <p class="muted">Plan y consumos al cierre de cada día. Las horas de cada consumo se reparten uniformemente entre sus fechas, ambas incluidas.</p>
+    <p v-if="!points.length" class="muted">Sin planificación. Agregá tareas para definir las fechas y las horas del proyecto.</p>
+    <template v-else>
+    <p class="muted">Plan y consumos al cierre de cada día. Las horas de cada tarea y consumo se reparten entre sus fechas, ambas incluidas; las tareas simultáneas se suman.</p>
     <p v-if="forecastStatus" class="forecast-status" :class="forecastStatus.acceptable ? 'forecast-ok' : 'forecast-warning'" role="status">
       <strong>{{ forecastStatus.text }}</strong>
       <span> · Proyección al cierre: {{ fmt(finalForecast) }} h / {{ fmt(project.horas_requeridas) }} h requeridas</span>
@@ -90,12 +93,13 @@ function inspect(event: MouseEvent) {
       <template v-else-if="projected !== null"> · Proyectadas: {{ fmt(projected) }} h</template>
       <template v-else> · Sin datos para proyectar</template>
     </p>
-    <p v-if="hasForecast" class="muted">Proyección estimada con la pendiente de regresión lineal de los acumulados diarios, continuando desde el último valor aplicado. No representa horas registradas.</p>
-    <p v-else-if="consumptions.length && forecast.lastDate < project.fecha_fin" class="muted">Se necesitan al menos dos días de datos dentro del proyecto para calcular la regresión.</p>
+    <p v-if="hasForecast" class="muted">Proyección estimada con la pendiente de regresión lineal de los acumulados diarios, desde la fecha del reporte ({{ label(reportDate) }}), partiendo del último acumulado aplicado. El tramo sin nuevas cargas hasta esa fecha se mantiene horizontal. No representa horas registradas.</p>
+    <p v-else-if="consumptions.length && project.fecha_fin && forecast.startDate < project.fecha_fin" class="muted">Se necesitan al menos dos días de datos dentro del proyecto para calcular la regresión.</p>
     <p v-if="hasForecast && (forecast.values.at(-1) ?? 0) > project.horas_requeridas" class="overrun">La proyección al fin del proyecto es {{ fmt(forecast.values.at(-1)) }} h y supera la escala del gráfico.</p>
     <p v-if="!consumptions.length" class="muted">Sin consumos registrados: las horas aplicadas son cero.</p>
     <p v-if="excess > 0" class="overrun">Total aplicado: {{ fmt(total) }} h. Exceso: {{ fmt(excess) }} h. El eje muestra hasta {{ fmt(project.horas_requeridas) }} h; los valores superiores quedan fuera del gráfico y se pueden consultar por día.</p>
     <p v-if="beforeStart" class="muted">El primer día incluye las horas aplicadas antes del inicio del proyecto.</p>
+    </template>
   </section>
 </template>
 

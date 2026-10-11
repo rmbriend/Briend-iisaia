@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..errors import APIError, forbidden
+from ..errors import forbidden
 from ..models import Proyecto, Recurso, Tarea
 from ..queries import columns, get_or_404, reference
 from ..schemas import TareaIn, TareaOut
@@ -12,8 +12,6 @@ from ..sessions import DB, User, protected
 from .projects import editable_project
 
 router = APIRouter(prefix='/api', tags=['tareas'], dependencies=protected)
-
-OUTSIDE_PROJECT = 'Las fechas de la tarea deben estar dentro de las del proyecto ({} → {}).'
 
 
 def task_rows(db: Session, *conditions) -> list[dict]:
@@ -48,13 +46,10 @@ def editable_task(identifier: int, db: DB, user: User) -> Tarea:
 
 
 def apply(task: Tarea, project_id: int, data: TareaIn, db: DB) -> dict:
-    # Row lock: a concurrent change of the project's dates cannot leave this task outside them.
-    project = db.get(Proyecto, project_id, with_for_update=True, populate_existing=True)
-    if data.fecha_inicio < project.fecha_inicio or data.fecha_fin > project.fecha_fin:
-        raise APIError(OUTSIDE_PROJECT.format(project.fecha_inicio, project.fecha_fin))
+    db.get(Proyecto, project_id, with_for_update=True, populate_existing=True)
     task.proyecto_id = project_id
     task.recurso_id = None if data.recurso_id is None else reference(db, Recurso, data.recurso_id)
-    for key in ('tarea_nombre', 'fecha_inicio', 'fecha_fin', 'porcentaje_avance'):
+    for key in ('tarea_nombre', 'fecha_inicio', 'fecha_fin', 'porcentaje_avance', 'horas_requeridas'):
         setattr(task, key, getattr(data, key))
     db.add(task)
     db.commit()
@@ -73,6 +68,7 @@ def update(task: Annotated[Tarea, Depends(editable_task)], data: TareaIn, db: DB
 
 @router.delete('/tareas/{identifier}', status_code=204)
 def remove(task: Annotated[Tarea, Depends(editable_task)], db: DB):
+    db.get(Proyecto, task.proyecto_id, with_for_update=True, populate_existing=True)
     db.delete(task)
     db.commit()
     return Response(status_code=204)

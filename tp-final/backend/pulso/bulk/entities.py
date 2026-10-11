@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from ..mail import exceeded_hours_message
 from ..models import Consumo, Proyecto, Recurso, Rol, Tarea
-from ..routers.tasks import OUTSIDE_PROJECT
 from ..schemas import ConsumoIn, ProyectoIn, RecursoIn, RolIn, TareaIn
 from ..security import hash_password
 from .base import (
@@ -104,9 +103,6 @@ def prepare_proyectos(raw: dict[str, Any], ctx: Context) -> Build:
             ProyectoIn,
             {
                 'proyecto_nombre': to_text(raw.get('proyecto_nombre')),
-                'fecha_inicio': to_date(raw.get('fecha_inicio')),
-                'fecha_fin': to_date(raw.get('fecha_fin')),
-                'horas_requeridas': to_number(raw.get('horas_requeridas')),
                 'proyect_status': to_text(raw.get('proyect_status')),
                 'porcentaje_avance': to_number(raw.get('porcentaje_avance')) or 0,
             },
@@ -122,9 +118,6 @@ def prepare_proyectos(raw: dict[str, Any], ctx: Context) -> Build:
     ctx.seen('project-names').add(key)
     return lambda: Proyecto(
         proyecto_nombre=data.proyecto_nombre,
-        fecha_inicio=data.fecha_inicio,
-        fecha_fin=data.fecha_fin,
-        horas_requeridas=data.horas_requeridas,
         owner_id=owner,
         proyect_status=data.proyect_status,
         porcentaje_avance=data.porcentaje_avance,
@@ -136,9 +129,6 @@ PROYECTOS = EntitySpec(
     label='Proyectos',
     example={
         'proyecto_nombre': 'Portal clientes',
-        'fecha_inicio': '2026-10-01',
-        'fecha_fin': '2026-12-31',
-        'horas_requeridas': '400',
         'owner': 'maria',
         'proyect_status': 'En curso',
         'porcentaje_avance': '0',
@@ -146,9 +136,6 @@ PROYECTOS = EntitySpec(
     columns=frozenset(
         {
             'proyecto_nombre',
-            'fecha_inicio',
-            'fecha_fin',
-            'horas_requeridas',
             'owner',
             'owner_id',
             'proyect_status',
@@ -157,17 +144,11 @@ PROYECTOS = EntitySpec(
     ),
     required=(
         ('proyecto_nombre',),
-        ('fecha_inicio',),
-        ('fecha_fin',),
-        ('horas_requeridas',),
         ('owner', 'owner_id'),
         ('proyect_status',),
     ),
     aliases={
         'nombre': 'proyecto_nombre',
-        'inicio': 'fecha_inicio',
-        'fin': 'fecha_fin',
-        'horas': 'horas_requeridas',
         'responsable': 'owner',
         'estado': 'proyect_status',
         'status': 'proyect_status',
@@ -187,6 +168,7 @@ def prepare_tareas(raw: dict[str, Any], ctx: Context) -> Build:
             TareaIn,
             {
                 'tarea_nombre': to_text(raw.get('tarea_nombre')),
+                'horas_requeridas': to_number(raw.get('horas_requeridas')),
                 'fecha_inicio': to_date(raw.get('fecha_inicio')),
                 'fecha_fin': to_date(raw.get('fecha_fin')),
                 'porcentaje_avance': to_number(raw.get('porcentaje_avance')) or 0,
@@ -197,8 +179,6 @@ def prepare_tareas(raw: dict[str, Any], ctx: Context) -> Build:
         raise problem(
             'proyecto', 'Solo el responsable o un administrador puede cargar tareas en este proyecto.'
         )
-    if data.fecha_inicio < project.fecha_inicio or data.fecha_fin > project.fecha_fin:
-        raise problem('fecha_inicio', OUTSIDE_PROJECT.format(project.fecha_inicio, project.fecha_fin))
     known = ctx.seen('task-names')
     loaded = ctx.seen('tasks-loaded')
     if project.proyecto_id not in loaded:
@@ -220,6 +200,7 @@ def prepare_tareas(raw: dict[str, Any], ctx: Context) -> Build:
     return lambda: Tarea(
         proyecto_id=project.proyecto_id,
         tarea_nombre=data.tarea_nombre,
+        horas_requeridas=data.horas_requeridas,
         fecha_inicio=data.fecha_inicio,
         fecha_fin=data.fecha_fin,
         porcentaje_avance=data.porcentaje_avance,
@@ -233,6 +214,7 @@ TAREAS = EntitySpec(
     example={
         'proyecto': 'Portal clientes',
         'tarea_nombre': 'Diseño',
+        'horas_requeridas': '40',
         'fecha_inicio': '2026-10-01',
         'fecha_fin': '2026-10-15',
         'porcentaje_avance': '0',
@@ -243,6 +225,7 @@ TAREAS = EntitySpec(
             'proyecto',
             'proyecto_id',
             'tarea_nombre',
+            'horas_requeridas',
             'fecha_inicio',
             'fecha_fin',
             'porcentaje_avance',
@@ -253,11 +236,13 @@ TAREAS = EntitySpec(
     required=(
         ('proyecto', 'proyecto_id'),
         ('tarea_nombre',),
+        ('horas_requeridas',),
         ('fecha_inicio',),
         ('fecha_fin',),
     ),
     aliases={
         'tarea': 'tarea_nombre',
+        'horas': 'horas_requeridas',
         'nombre': 'tarea_nombre',
         'inicio': 'fecha_inicio',
         'fin': 'fecha_fin',

@@ -122,9 +122,6 @@ def login(client, name='admin', password='Proyecto1'):
 def project_data():
     return dict(
         proyecto_nombre='Proyecto editado',
-        fecha_inicio='2026-09-01',
-        fecha_fin='2026-09-30',
-        horas_requeridas='10',
         owner_id='2',
         proyect_status='En curso',
         porcentaje_avance='25',

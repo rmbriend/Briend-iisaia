@@ -35,7 +35,7 @@ const project = computed(() => report.data.value?.proyecto)
       />
       <HealthPanel :health="report.data.value.salud" />
       <PeriodHoursChart :periods="report.data.value.periodos" :period="period" @update:period="period = $event" />
-      <PacePanel :report="report.data.value" :consumptions="detail.data.value?.consumos ?? []" />
+      <PacePanel :report="report.data.value" :consumptions="detail.data.value?.consumos ?? []" :tasks="detail.data.value?.tareas ?? []" />
       <ExecutionPanel :report="report.data.value" />
       <TaskHealthPanel :report="report.data.value" />
       <DistributionCharts :report="report.data.value" />

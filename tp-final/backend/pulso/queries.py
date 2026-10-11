@@ -50,7 +50,7 @@ def project_summary(project: Proyecto, responsable: str, consumed: float) -> dic
         horas_consumidas=consumed,
         saldo=saldo,
         exceso=max(-saldo, 0),
-        porcentaje_consumo=consumed / project.horas_requeridas * 100,
+        porcentaje_consumo=consumed / project.horas_requeridas * 100 if project.horas_requeridas else 0,
     )
     return data
 

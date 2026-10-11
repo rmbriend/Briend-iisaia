@@ -54,7 +54,12 @@ class Proyecto(Base):
     __table_args__ = (
         CheckConstraint('length(trim(proyecto_nombre)) > 0', name='proyecto_nombre_no_vacio'),
         CheckConstraint('fecha_fin >= fecha_inicio', name='proyecto_fechas'),
-        CheckConstraint('horas_requeridas > 0', name='proyecto_horas_positivas'),
+        CheckConstraint(
+            '(fecha_inicio IS NULL AND fecha_fin IS NULL) OR '
+            '(fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL)',
+            name='proyecto_fechas_coherentes',
+        ),
+        CheckConstraint('horas_requeridas >= 0', name='proyecto_horas_positivas'),
         CheckConstraint(
             "proyect_status IN ('Pendiente','En curso','Pausado','Finalizado')", name='proyecto_estado'
         ),
@@ -63,9 +68,9 @@ class Proyecto(Base):
 
     proyecto_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     proyecto_nombre: Mapped[str] = mapped_column(Text)
-    fecha_inicio: Mapped[date] = mapped_column(Date)
-    fecha_fin: Mapped[date] = mapped_column(Date)
-    horas_requeridas: Mapped[float] = mapped_column(Double)
+    fecha_inicio: Mapped[date | None] = mapped_column(Date, nullable=True)
+    fecha_fin: Mapped[date | None] = mapped_column(Date, nullable=True)
+    horas_requeridas: Mapped[float] = mapped_column(Double, default=0, server_default='0')
     owner_id: Mapped[int] = mapped_column(ForeignKey('recurso.recurso_id', ondelete='RESTRICT'), index=True)
     proyect_status: Mapped[str] = mapped_column(Text)
     porcentaje_avance: Mapped[float] = mapped_column(Double, default=0, server_default='0')
@@ -92,13 +97,14 @@ class Consumo(Base):
 
 
 class Tarea(Base):
-    """Planned task of a project (Gantt). Its dates must fall inside the project's (checked by the API)."""
+    """Planned task of a project (Gantt). Its estimates and dates define the project plan."""
 
     __tablename__ = 'tarea'
     __table_args__ = (
         CheckConstraint('length(trim(tarea_nombre)) > 0', name='tarea_nombre_no_vacio'),
         CheckConstraint('fecha_fin >= fecha_inicio', name='tarea_fechas'),
         CheckConstraint('porcentaje_avance BETWEEN 0 AND 100', name='tarea_avance'),
+        CheckConstraint('horas_requeridas > 0', name='tarea_horas_positivas'),
     )
 
     tarea_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -106,6 +112,7 @@ class Tarea(Base):
         ForeignKey('proyecto.proyecto_id', ondelete='RESTRICT'), index=True
     )
     tarea_nombre: Mapped[str] = mapped_column(Text)
+    horas_requeridas: Mapped[float] = mapped_column(Double)
     fecha_inicio: Mapped[date] = mapped_column(Date)
     fecha_fin: Mapped[date] = mapped_column(Date)
     porcentaje_avance: Mapped[float] = mapped_column(Double, default=0, server_default='0')

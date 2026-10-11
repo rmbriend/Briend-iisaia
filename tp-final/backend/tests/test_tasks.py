@@ -8,6 +8,7 @@ def task_data(**changes):
     return (
         dict(
             tarea_nombre='Relevamiento',
+            horas_requeridas='8',
             fecha_inicio='2026-09-02',
             fecha_fin='2026-09-10',
             porcentaje_avance='0',
@@ -74,26 +75,23 @@ def test_validation(client):
         assert response.json()['error']['message'] == message, changes
 
 
-def test_task_dates_must_fall_inside_the_project(client):
-    login(client)  # project 1 runs 2026-09-01 → 2026-09-30
-    for changes in (dict(fecha_inicio='2026-08-31'), dict(fecha_fin='2026-10-01')):
-        response = create_task(client, **changes)
-        assert response.status_code == 400
-        assert response.json()['error']['message'] == (
-            'Las fechas de la tarea deben estar dentro de las del proyecto (2026-09-01 → 2026-09-30).'
-        )
-    assert create_task(client, fecha_inicio='2026-09-01', fecha_fin='2026-09-30').status_code == 201
+def test_task_dates_define_the_project(client):
+    login(client)
+    assert create_task(client, fecha_inicio='2026-08-31', fecha_fin='2026-10-01').status_code == 201
+    project = client.get('/api/proyectos/1').json()['proyecto']
+    assert project['fecha_inicio'] == '2026-08-31'
+    assert project['fecha_fin'] == '2026-10-01'
+    assert project['horas_requeridas'] == 8
 
 
-def test_project_range_cannot_leave_tasks_outside(client):
+def test_project_plan_is_not_editable(client):
     login(client)
     create_task(client, fecha_fin='2026-09-20')
-    shrunk = mutate(client, 'PUT', '/api/proyectos/1', project_data() | {'fecha_fin': '2026-09-15'})
-    assert shrunk.status_code == 400
-    assert 'Hay 1 tarea(s) fuera de las nuevas fechas' in shrunk.json()['error']['message']
-    assert scalar(client.app, 'SELECT fecha_fin FROM proyecto').isoformat() == '2026-09-30'
-    widened = mutate(client, 'PUT', '/api/proyectos/1', project_data() | {'fecha_fin': '2026-10-31'})
-    assert widened.status_code == 200
+    for changes in ({'fecha_inicio': '2026-01-01'}, {'fecha_fin': '2027-01-01'}, {'horas_requeridas': 1000}):
+        response = mutate(client, 'PUT', '/api/proyectos/1', project_data() | changes)
+        assert response.status_code == 400
+        assert 'no son editables' in response.json()['error']['message']
+    assert scalar(client.app, 'SELECT fecha_fin FROM proyecto').isoformat() == '2026-09-20'
 
 
 def test_project_with_tasks_cannot_be_deleted(client):

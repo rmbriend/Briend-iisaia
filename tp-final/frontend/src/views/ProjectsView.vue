@@ -111,7 +111,7 @@ function retry() {
         </div>
         <p :class="p.exceso > 0 ? 'overrun' : 'muted'">Saldo: {{ fmt(p.saldo) }} h · Exceso: {{ fmt(p.exceso) }} h</p>
         <div class="card-bottom">
-          <small>{{ p.fecha_inicio }} → {{ p.fecha_fin }}</small>
+          <small>{{ p.fecha_inicio ?? 'Sin planificación' }} → {{ p.fecha_fin ?? '—' }}</small>
           <RouterLink :to="`/proyectos/${p.proyecto_id}`">Ver proyecto →</RouterLink>
         </div>
       </article>

@@ -30,14 +30,14 @@ const project = useQuery({
 const p = computed(() => project.data.value?.proyecto)
 
 const form = reactive({
-  tarea_nombre: '', fecha_inicio: '', fecha_fin: '', porcentaje_avance: '0' as string | number, recurso_id: '',
+  horas_requeridas: '' as string | number, tarea_nombre: '', fecha_inicio: '', fecha_fin: '', porcentaje_avance: '0' as string | number, recurso_id: '',
 })
 watch(
   () => existing.data.value,
   (t) => {
     if (!t) return
     Object.assign(form, {
-      tarea_nombre: t.tarea_nombre, fecha_inicio: t.fecha_inicio, fecha_fin: t.fecha_fin,
+      horas_requeridas: t.horas_requeridas, tarea_nombre: t.tarea_nombre, fecha_inicio: t.fecha_inicio, fecha_fin: t.fecha_fin,
       porcentaje_avance: t.porcentaje_avance, recurso_id: toText(t.recurso_id),
     })
   },
@@ -54,19 +54,12 @@ const denied = computed(() => {
 const back = computed(() => `/proyectos/${projectId.value ?? ''}`)
 
 const dateReady = computed(() => !!form.fecha_inicio && !!form.fecha_fin)
-// Mirrors backend/pulso/routers/tasks.py (OUTSIDE_PROJECT) and schemas.py (DateRange.ordered),
-// so the live message matches what the API would otherwise reject at submit time.
-const dateError = computed(() => {
-  if (!dateReady.value || !p.value) return null
-  if (form.fecha_inicio < p.value.fecha_inicio || form.fecha_fin > p.value.fecha_fin) {
-    return `Las fechas de la tarea deben estar dentro de las del proyecto (${p.value.fecha_inicio} → ${p.value.fecha_fin}).`
-  }
-  return dateRangeError(form.fecha_inicio, form.fecha_fin)
-})
+const dateError = computed(() => dateReady.value ? dateRangeError(form.fecha_inicio, form.fecha_fin) : null)
 
 const { busy, submit } = useSubmit(async () => {
   const body = {
     ...form,
+    horas_requeridas: toNumber(form.horas_requeridas),
     porcentaje_avance: toNumber(form.porcentaje_avance),
     recurso_id: form.recurso_id ? toNumber(form.recurso_id) : null,
   }
@@ -86,21 +79,22 @@ const { busy, submit } = useSubmit(async () => {
       :title="id ? 'Editar tarea' : 'Nueva tarea'" :back="back" :busy="busy"
       :disabled="!dateReady || !!dateError" @submit="submit"
     >
-      <p v-if="p" class="muted">Proyecto {{ p.proyecto_nombre }} · {{ p.fecha_inicio }} → {{ p.fecha_fin }}</p>
+      <p v-if="p" class="muted">Proyecto {{ p.proyecto_nombre }} · {{ p.fecha_inicio ?? 'Sin planificación' }} → {{ p.fecha_fin ?? '—' }}</p>
       <TextField v-model="form.tarea_nombre" name="tarea_nombre" label="Nombre de la tarea" required />
       <div class="form-grid">
-        <DateField v-model="form.fecha_inicio" name="fecha_inicio" label="Fecha de inicio" required :min="p?.fecha_inicio" :max="p?.fecha_fin" />
+        <DateField v-model="form.fecha_inicio" name="fecha_inicio" label="Fecha de inicio" required />
         <DateField
           v-model="form.fecha_fin" name="fecha_fin" label="Fecha de fin" required
-          :min="form.fecha_inicio || p?.fecha_inicio" :max="p?.fecha_fin"
+          :min="form.fecha_inicio || undefined"
         />
+        <TextField v-model="form.horas_requeridas" name="horas_requeridas" label="Horas requeridas" type="number" required min="0" step="any" />
         <TextField v-model="form.porcentaje_avance" name="porcentaje_avance" label="Avance (%)" type="number" required min="0" max="100" step="any" />
         <SelectField
           v-model="form.recurso_id" name="recurso_id" label="Responsable de la tarea" blank="Sin asignar" :required="false"
           :options="(catalogs.data.value?.recursos ?? []).map((r) => ({ value: r.recurso_id, label: r.recurso_nombre }))"
         />
       </div>
-      <p class="muted">Las fechas deben estar dentro de las del proyecto.</p>
+      <p class="muted">Las fechas y las horas de esta tarea actualizan automáticamente el plan del proyecto.</p>
       <p v-if="dateError" class="field-error">{{ dateError }}</p>
     </FormShell>
   </LoadState>

@@ -65,7 +65,7 @@ const STATE_TEXT = { bien: 'En orden', atencion: 'Atención', critico: 'Crítico
 export const stateText = (state: IndexView['state']) => (state ? STATE_TEXT[state] : 'Sin datos')
 
 export function indexViews(health: Health): IndexView[] {
-  const index = (value: number | null) => (value === null ? '—' : fmt(value))
+  const index = (value: number | null) => (value === null ? '—' : `${fmt(value * 100)} %`)
   return [
     {
       title: 'Eficiencia de horas',
@@ -89,8 +89,8 @@ export function indexViews(health: Health): IndexView[] {
 }
 
 /** Gap between the projected and planned end, in plain words. */
-export function endGap(projected: string | null, planned: string): string | null {
-  if (!projected) return null
+export function endGap(projected: string | null, planned: string | null): string | null {
+  if (!projected || !planned) return null
   const days = Math.round((Date.parse(projected) - Date.parse(planned)) / 86400000)
   if (days === 0) return 'justo en la fecha de fin planificada'
   return `${Math.abs(days)} día${Math.abs(days) === 1 ? '' : 's'} ${days > 0 ? 'después' : 'antes'} del fin planificado`

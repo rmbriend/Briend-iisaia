@@ -17,7 +17,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from .config import Settings
-from .models import Consumo, Proyecto, Recurso, Rol
+from .models import Consumo, Proyecto, Recurso, Rol, Tarea
 from .security import hash_password
 
 ALEMBIC_INI = Path(__file__).resolve().parent.parent / 'alembic.ini'
@@ -101,6 +101,19 @@ def import_sqlite(path: str, url: str) -> dict[str, int]:
                     )
                 )
                 counts[table] = len(rows)
+            for project in db.scalars(select(Proyecto)).all():
+                db.add(
+                    Tarea(
+                        proyecto_id=project.proyecto_id,
+                        tarea_nombre='Planificación inicial (importada)',
+                        fecha_inicio=project.fecha_inicio,
+                        fecha_fin=project.fecha_fin,
+                        horas_requeridas=project.horas_requeridas,
+                        porcentaje_avance=project.porcentaje_avance,
+                        recurso_id=project.owner_id,
+                    )
+                )
+            db.flush()
     finally:
         source.close()
         engine.dispose()

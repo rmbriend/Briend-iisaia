@@ -5,6 +5,7 @@ import { escapeHtml, popup, taskBars, toISODate } from '@/gantt'
 
 const task = (over: Partial<Task> = {}): Task => ({
   tarea_id: 7,
+  horas_requeridas: 20,
   proyecto_id: 1,
   tarea_nombre: 'R&D <img src=x onerror=alert(1)>',
   fecha_inicio: '2026-03-01',

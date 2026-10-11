@@ -6,10 +6,10 @@ import { endGap, isoToLocal, type Report } from '@/dashboard'
 import { projectHours, projectedEndDate, type HoursConsumption } from '@/projectHours'
 import { fmt } from '@/utils'
 
-const props = defineProps<{ report: Report; consumptions: HoursConsumption[] }>()
+const props = defineProps<{ report: Report; consumptions: HoursConsumption[]; tasks: import('@/projectHours').HoursTask[] }>()
 const pace = computed(() => props.report.ritmo)
 const endDate = computed(() =>
-  projectedEndDate(projectHours(props.report.proyecto, props.consumptions), props.consumptions, props.report.proyecto.horas_requeridas),
+  projectedEndDate(projectHours(props.report.proyecto, props.consumptions, props.tasks, props.report.fecha_corte), props.consumptions, props.report.proyecto.horas_requeridas, props.report.fecha_corte),
 )
 const stats = computed(() => [
   ['Ritmo últimas 4 semanas', `${fmt(pace.value.horas_semana_reciente)} h/sem`],
@@ -24,11 +24,12 @@ const gap = computed(() => endGap(endDate.value, props.report.proyecto.fecha_fin
   <section class="dash-panel">
     <h2>Ritmo y proyección</h2>
     <StatGrid :items="stats" />
-    <p v-if="pace.horas_semana_necesarias === null && report.proyecto.saldo > 0" class="overrun">El plazo del proyecto venció y todavía hay saldo de horas.</p>
+    <p v-if="!report.proyecto.fecha_fin" class="muted">Sin planificación: agregá tareas para definir el plazo y las horas requeridas.</p>
+    <p v-else-if="pace.horas_semana_necesarias === null && report.proyecto.saldo > 0" class="overrun">El plazo del proyecto venció y todavía hay saldo de horas.</p>
     <p v-else-if="report.proyecto.saldo <= 0" class="muted">Ya se consumieron todas las horas requeridas.</p>
     <p v-else class="muted">Quedan {{ pace.dias_restantes }} días y {{ fmt(report.proyecto.saldo) }} h de saldo.</p>
     <p v-if="gap" class="muted">Al ritmo de la regresión lineal, las horas requeridas se completan {{ gap }}.</p>
     <p v-else class="muted">Se necesitan al menos dos días de consumos con tendencia creciente para proyectar la fecha.</p>
-    <ProjectHoursChart :project="report.proyecto" :consumptions="consumptions" />
+    <ProjectHoursChart :project="report.proyecto" :consumptions="consumptions" :tasks="tasks" :report-date="report.fecha_corte" />
   </section>
 </template>

@@ -80,6 +80,10 @@ const health: Health = {
 describe('health panel', () => {
   it('explains each index and never relies on color alone', () => {
     const [efficiency, schedule] = indexViews(health)
+    expect(efficiency!.value).toBe('67 %')
+    expect(schedule!.value).toBe('—')
+    const percentages = indexViews({ ...health, indice_eficiencia: 1.1, indice_cronograma: 0.59 })
+    expect(percentages.map(index => index.value)).toEqual(['110 %', '59 %'])
     expect(efficiency!.sentence).toBe('Se consumió el 60 % de las horas y el avance es del 40 %.')
     expect(schedule!.sentence).toBe('El proyecto todavía no empezó.')
     const wrapper = mount(HealthPanel, { props: { health } })

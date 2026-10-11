@@ -56,15 +56,19 @@ test('admin creates a user, a role and a project', async ({ page }) => {
   await page.getByRole('link', { name: 'Proyectos', exact: true }).click()
   await page.getByRole('link', { name: '+ Nuevo proyecto' }).click()
   await page.getByLabel('Nombre del proyecto').fill('Portal <b>clientes</b>')
-  await fillDate(page, 'Fecha de inicio', '2026-09-01')
-  await fillDate(page, 'Fecha de fin prevista', '2026-09-30')
-  await page.getByLabel('Horas requeridas').fill('20')
   await page.getByLabel('Avance real (%)').fill('40')
   await page.getByLabel('Responsable').selectOption({ label: 'ana' })
   await page.getByLabel('Estado').selectOption('En curso')
   await page.getByRole('button', { name: 'Guardar' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Portal <b>clientes</b>') // escaped
-  await expect(page.getByText('ana · 2026-09-01 → 2026-09-30 · en curso')).toBeVisible()
+  await expect(page.getByText('Sin planificación').first()).toBeVisible()
+  await page.getByRole('link', { name: '+ Nueva tarea' }).click()
+  await page.getByLabel('Nombre de la tarea').fill('Plan base')
+  await fillDate(page, 'Fecha de inicio', '2026-09-01')
+  await fillDate(page, 'Fecha de fin', '2026-09-30')
+  await page.getByLabel('Horas requeridas').fill('20')
+  await page.getByRole('button', { name: 'Guardar' }).click()
+  await expect(page.getByText('ana · 2026-09-01 → 2026-09-30 · En curso')).toBeVisible()
 })
 
 test('plain user logs hours; invalid input keeps the form', async ({ page }) => {
@@ -88,7 +92,7 @@ test('plain user logs hours; invalid input keeps the form', async ({ page }) => 
   await expect(page.getByRole('button', { name: 'Guardar' })).toBeDisabled()
   await expect(page.getByLabel('Tarea realizada')).toHaveValue('Relevamiento') // input preserved
 
-  await fillDate(page, 'Fecha de fin', '2026-10-03')
+  await fillDate(page, 'Fecha de fin', '2026-10-04')
   await expect(page.getByRole('button', { name: 'Guardar' })).toBeEnabled()
   await page.getByRole('button', { name: 'Guardar' }).click()
   await expect(page.getByText('Cambios guardados.')).toBeVisible()
@@ -129,16 +133,14 @@ test('project owner plans tasks on the Gantt', async ({ page }) => {
   page.on('request', (request) => request.method() === 'PUT' && puts.push(request.url()))
   await login(page, 'ana', 'AnaPropia12') // owner of project 1 (2026-09-01 → 2026-09-30)
   await page.goto('/proyectos/1')
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('row', { name: /Plan base/ }).getByRole('button', { name: 'Eliminar' }).click()
   await expect(page.getByText('Todavía no hay tareas planificadas.')).toBeVisible()
 
   await page.getByRole('link', { name: '+ Nueva tarea' }).click()
   await page.getByLabel('Nombre de la tarea').fill('Diseño <i>UX</i> & R&D')
+  await page.getByLabel('Horas requeridas').fill('30')
   await fillDate(page, 'Fecha de inicio', '2026-09-01')
-  // DateField's min/max (bound to the project's own dates, and the end picker's min bound to
-  // whatever start was picked) now stop an out-of-range or reversed pair from being entered at
-  // all, live, instead of only rejecting it after Guardar — so there's nothing invalid to submit
-  // here any more. The backend's own OUTSIDE_PROJECT rule is still exercised below via a Gantt
-  // drag, which calls the API directly and bypasses the picker's client-side constraints.
   await fillDate(page, 'Fecha de fin', '2026-09-10')
   await page.getByLabel('Responsable de la tarea').selectOption({ label: 'ana' })
   await page.getByRole('button', { name: 'Guardar' }).click()
@@ -175,29 +177,6 @@ test('project owner plans tasks on the Gantt', async ({ page }) => {
   expect((Date.parse(end!) - Date.parse(start!)) / 86_400_000).toBe(9)
   await expect(page.getByRole('cell', { name: `${start} ${end}` })).toBeVisible()
   expect(puts).toHaveLength(1) // one request per drag, not one per day crossed
-
-  // Dragging it before the project start is rejected by the API and the bar goes back.
-  const settle = async () => {
-    let last = (await bar.boundingBox())!
-    await expect(async () => {
-      const previous = last
-      await page.waitForTimeout(150)
-      last = (await bar.boundingBox())!
-      expect(last).toEqual(previous)
-    }).toPass()
-    return last
-  }
-  const before = await settle()
-  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(before.x + before.width / 2 - day * 6, before.y + before.height / 2, { steps: 8 })
-  await page.mouse.up()
-  await expect(page.getByRole('alert')).toHaveText(
-    'Las fechas de la tarea deben estar dentro de las del proyecto (2026-09-01 → 2026-09-30).',
-  )
-  await expect(page.getByRole('cell', { name: `${start} ${end}` })).toBeVisible()
-  expect((await settle()).x).toBeCloseTo(before.x, 0)
-  expect(puts).toHaveLength(2)
 
   // A deleted or unknown task shows an error instead of loading forever.
   await page.goto('/tareas/999/editar')

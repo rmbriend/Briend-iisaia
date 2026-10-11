@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { projectHours, projectForecast, forecastStatus, projectedEndDate } from '@/projectHours'
+import { projectHours as calculateProjectHours, projectForecast as calculateForecast, forecastStatus, projectedEndDate as calculateEndDate } from '@/projectHours'
 import ProjectHoursChart from '@/components/ProjectHoursChart.vue'
 
 const project = { fecha_inicio: '2026-10-01', fecha_fin: '2026-10-03', horas_requeridas: 36 }
+const projectHours: typeof calculateProjectHours = (p, consumptions, tasks = p.fecha_inicio && p.fecha_fin ? [{ fecha_inicio: p.fecha_inicio, fecha_fin: p.fecha_fin, horas_requeridas: p.horas_requeridas }] : []) => calculateProjectHours(p, consumptions, tasks)
+
+const lastDate = (rows: { fecha_fin: string }[]) => rows.reduce((last, row) => row.fecha_fin > last ? row.fecha_fin : last, '')
+const projectForecast: typeof calculateForecast = (points, rows, finish, reportDate = lastDate(rows)) => calculateForecast(points, rows, finish, reportDate)
+const projectedEndDate: typeof calculateEndDate = (points, rows, required, reportDate = lastDate(rows)) => calculateEndDate(points, rows, required, reportDate)
+
 describe('cumulative project hours', () => {
   it('includes both dates and ends exactly at the required hours', () => {
     const points = projectHours(project, [])
@@ -32,7 +38,7 @@ describe('cumulative project hours', () => {
     expect(projectHours({ ...project, fecha_inicio: '2028-02-28', fecha_fin: '2028-03-01' }, [])).toHaveLength(3)
   })
   it('shows both lines and lets the user inspect individual days', async () => {
-    const wrapper = mount(ProjectHoursChart, { props: { project, consumptions: [] } })
+    const wrapper = mount(ProjectHoursChart, { props: { reportDate: '2026-10-01', project, tasks: [project], consumptions: [] } })
     expect(wrapper.findAll('path')).toHaveLength(2)
     expect(wrapper.text()).toContain('Sin consumos registrados')
     await wrapper.get('input[type="range"]').setValue(0)
@@ -70,7 +76,7 @@ describe('linear forecast', () => {
     }
   })
   it('ends the actual path at the last recorded date and labels future values as projected', async () => {
-    const wrapper = mount(ProjectHoursChart, { props: { project: plan, consumptions: [
+    const wrapper = mount(ProjectHoursChart, { props: { reportDate: '2026-10-01', project: plan, tasks: [plan], consumptions: [
       { fecha_inicio: '2026-10-01', fecha_fin: '2026-10-03', horas_consumidas: 30 },
     ] } })
     expect(wrapper.get('.actual-line').attributes('d')!.match(/L/g)).toHaveLength(2)
@@ -92,7 +98,9 @@ describe('forecast status', () => {
     [115.01, 'Sobre aplicacion', 'forecast-warning'],
   ])('classifies a final forecast of %s hours', async (final, text, css) => {
     const wrapper = mount(ProjectHoursChart, { props: {
+      reportDate: '2026-10-01',
       project: { fecha_inicio: '2026-10-01', fecha_fin: '2026-10-05', horas_requeridas: 100 },
+      tasks: [{ fecha_inicio: '2026-10-01', fecha_fin: '2026-10-05', horas_requeridas: 100 }],
       consumptions: [{ fecha_inicio: '2026-10-01', fecha_fin: '2026-10-02', horas_consumidas: final * 2 / 5 }],
     } })
     expect(wrapper.get('.forecast-status').text()).toContain(text)
@@ -103,7 +111,7 @@ describe('forecast status', () => {
     wrapper.unmount()
   })
   it('does not classify when a forecast cannot be calculated', () => {
-    const wrapper = mount(ProjectHoursChart, { props: { project, consumptions: [] } })
+    const wrapper = mount(ProjectHoursChart, { props: { reportDate: '2026-10-01', project, tasks: [project], consumptions: [] } })
     expect(wrapper.find('.forecast-status').exists()).toBe(false)
     wrapper.unmount()
   })
@@ -133,5 +141,63 @@ describe('forecast status and projected end date', () => {
     const one = [row('2026-10-01', '2026-10-01', 5)]
     expect(projectedEndDate(projectHours(plan, one), one, 100)).toBeNull()
     expect(projectedEndDate(projectHours(plan, []), [], 100)).toBeNull()
+  })
+})
+
+
+describe('task-based plan', () => {
+  const p = { fecha_inicio: '2026-10-01', fecha_fin: '2026-10-05', horas_requeridas: 50 }
+  it('adds overlapping tasks and keeps inactive gaps flat', () => {
+    const tasks = [
+      { fecha_inicio: '2026-10-01', fecha_fin: '2026-10-02', horas_requeridas: 20 },
+      { fecha_inicio: '2026-10-02', fecha_fin: '2026-10-02', horas_requeridas: 10 },
+      { fecha_inicio: '2026-10-05', fecha_fin: '2026-10-05', horas_requeridas: 20 },
+    ]
+    expect(calculateProjectHours(p, [], tasks).map(point => point.planned)).toEqual([10,30,30,30,50])
+  })
+  it('ends at the exact sum even with fractional daily estimates', () => {
+    const tasks = [{ fecha_inicio: p.fecha_inicio, fecha_fin: p.fecha_fin, horas_requeridas: 7 }]
+    expect(calculateProjectHours(p, [], tasks).at(-1)!.planned).toBe(7)
+  })
+  it('shows an empty plan until tasks are added', () => {
+    expect(calculateProjectHours({ fecha_inicio: null, fecha_fin: null, horas_requeridas: 0 }, [], [])).toEqual([])
+    const wrapper = mount(ProjectHoursChart, { props: { reportDate: '2026-10-01', project: { fecha_inicio: null, fecha_fin: null, horas_requeridas: 0 }, consumptions: [], tasks: [] } })
+    expect(wrapper.text()).toContain('Sin planificación')
+    expect(wrapper.find('svg').exists()).toBe(false)
+    wrapper.unmount()
+  })
+})
+
+
+describe('projection starts at the report date', () => {
+  it('extends the flat balance up to the report date for an overdue project', () => {
+    const p = { fecha_inicio: '2026-10-01', fecha_fin: '2026-10-03', horas_requeridas: 30 }
+    const rows = [{ fecha_inicio: '2026-10-01', fecha_fin: '2026-10-02', horas_consumidas: 10 }]
+    const points = calculateProjectHours(p, rows, [p], '2026-10-05')
+    expect(points.map(point => point.actual)).toEqual([5,10,10,10,10])
+    expect(points.at(-1)!.date).toBe('2026-10-05')
+  })
+  const plan = { fecha_inicio: '2026-10-01', fecha_fin: '2026-10-07', horas_requeridas: 70 }
+  const rows = [{ fecha_inicio: '2026-10-01', fecha_fin: '2026-10-03', horas_consumidas: 30 }]
+  it('keeps the last applied balance flat until today and projects only after today', async () => {
+    const points = projectHours(plan, rows)
+    const result = calculateForecast(points, rows, plan.fecha_fin, '2026-10-05')
+    expect(result.startDate).toBe('2026-10-05')
+    expect(result.values).toEqual([null, null, null, null, 30, 40, 50])
+    const wrapper = mount(ProjectHoursChart, { props: { project: plan, tasks: [plan], consumptions: rows, reportDate: '2026-10-05' } })
+    expect(wrapper.get('.actual-line').attributes('d')!.match(/L/g)).toHaveLength(4)
+    await wrapper.get('input').setValue(3)
+    expect(wrapper.get('.chart-values').text()).toContain('Aplicadas: 30 h')
+    await wrapper.get('input').setValue(5)
+    expect(wrapper.get('.chart-values').text()).toContain('Proyectadas: 40 h')
+    wrapper.unmount()
+  })
+  it('moves the projected completion date to account for the idle period', () => {
+    expect(calculateEndDate(projectHours(plan, rows), rows, 70, '2026-10-05')).toBe('2026-10-09')
+  })
+  it('does not draw a future projection when the report is on or after the planned end', () => {
+    for (const today of ['2026-10-07', '2026-10-08']) {
+      expect(calculateForecast(projectHours(plan, rows), rows, plan.fecha_fin, today).values.every(v => v === null)).toBe(true)
+    }
   })
 })
